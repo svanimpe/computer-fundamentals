@@ -1,0 +1,5 @@
+.DS_Store
+.vitepress/dist
+.vitepress/cache
+.vscode/
+node_modules/
