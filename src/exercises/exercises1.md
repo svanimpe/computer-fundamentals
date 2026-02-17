@@ -53,7 +53,7 @@ Perform the following tasks:
 
 Use the Settings app to add an additional user account. Use the Quick Settings panel to switch to this account, then back to yours. Remove the account when you're done.
 
-## Exercise 1.5
+## Exercise 1.5 {#commands}
 
 Open a terminal and run the following commands:
 
