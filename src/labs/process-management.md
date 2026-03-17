@@ -21,8 +21,6 @@ In this lab assignment you will learn:
 ```bash
 ps -ef
 top
-htop # moet nog geïnstalleerd worden
-btop # moet nog geïnstalleerd worden
 ```
 
 (uitleg procestabel)
@@ -107,6 +105,30 @@ ps <pid>
 (uitleg: details van één specifiek proces opvragen)
 
 (vraag: zoek het PID van je eigen bash-sessie op)
+
+## Inspecting /proc
+
+(uitleg: /proc is een virtueel bestandssysteem dat de kernel realtime beschikbaar stelt; voor elk actief proces bestaat er een map /proc/PID)
+
+```bash
+ls /proc/<pid>
+```
+
+(uitleg: overzicht van de bestanden in de procesmap — elk bestand stelt een eigenschap van het proces voor)
+
+```bash
+cat /proc/<pid>/status
+```
+
+(uitleg: toont naam, PID, PPID, status, geheugengebruik en meer van het proces)
+
+```bash
+cat /proc/<pid>/cmdline
+```
+
+(uitleg: het exacte commando waarmee het proces gestart werd)
+
+(vraag: open /proc/PID/status van script1. Welke velden herken je uit de uitvoer van ps?)
 
 ## Stopping processes
 
