@@ -178,3 +178,61 @@ renice 5 -p <pid>
 ```
 
 (uitleg: prioriteit aanpassen van een lopend proces; alleen root kan negatieve waarden instellen)
+
+## Concurrency
+
+(uitleg: wat is concurrency, waarom ontstaan race conditions bij gedeelde bronnen)
+
+(voorbeeld: script 4 — een bash-script dat een teller leest uit een bestand, ophoogt en terugschrijft; meerdere instanties worden tegelijk op de achtergrond gestart; de eindwaarde is lager dan verwacht door de race condition)
+
+```bash
+# start N instanties tegelijk op de achtergrond
+for i in $(seq 1 50); do ./script4.sh & done
+wait
+cat counter.txt
+```
+
+(uitleg: elke instantie leest dezelfde waarde voordat een andere heeft kunnen schrijven — de verhogingen gaan verloren)
+
+(vraag: als 50 instanties elk de teller 1 keer ophogen, wat zou de verwachte eindwaarde zijn? Wat zie je in werkelijkheid? Waarom?)
+
+(voorbeeld: script 5 — zelfde als script 4 maar gebruikt een lockfile als mutex; slechts één instantie tegelijk mag de teller lezen en schrijven)
+
+```bash
+for i in $(seq 1 50); do ./script5.sh & done
+wait
+cat counter.txt
+```
+
+(uitleg: de lockfile zorgt voor mutual exclusion — de eindwaarde is nu correct)
+
+(vraag: wat is het nadeel van een lockfile als mutex? Wat kan er misgaan als een script crasht terwijl het de lock vasthoudt?)
+
+## Threads
+
+(uitleg: wat is een thread, verschil met een proces, gedeeld geheugen als voordeel én risico)
+
+(voorbeeld: script 6 — een Python-script met twee threads die zonder locking een gedeelde variabele ophogen; toont de verkeerde eindwaarde; mirrors de race condition van script 4 maar nu binnen één proces)
+
+```bash
+python3 script6.py
+```
+
+(uitleg: threads delen hetzelfde geheugen, waardoor de race condition nog sneller optreedt dan bij processen)
+
+(voorbeeld: script 7 — zelfde als script 6 maar gebruikt threading.Lock; eindwaarde is correct; mirrors script 5)
+
+```bash
+python3 script7.py
+```
+
+(uitleg: threading.Lock werkt als een mutex op geheugeniveau — efficiënter dan een lockfile maar zelfde principe)
+(TODO: is mutex niet teveel out of scope?)
+
+(voorbeeld: script 8 — een Python-script dat een tijdrovende taak eerst sequentieel uitvoert en daarna met threads; toont de uitvoertijd van beide aanpakken + illustratie dat er een limiet is aan de snelheidstoename door threads)
+
+```bash
+python3 script8.py
+```
+
+(uitleg: threads zijn nuttig wanneer taken onafhankelijk van elkaar zijn en kunnen overlappen, bv. bij I/O-wachttijden)
