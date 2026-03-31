@@ -136,49 +136,68 @@ pstree -p
 
 ## Starting processes
 
-(uitleg over het ontstaan van processen: fork, exec, wait)
+In Linux a process can create child processes using the `fork` system call, which creates a new process that is an exact copy of the parent process. The child process can then replace its memory space with a different program using the `exec` system call.
 
-(voorbeeld: script 1 — een script dat een child process aanmaakt via fork/exec en wacht via wait; toont PID en PPID van ouder en kind)
+Both child and parent can do their thing after the fork. Eventually the child process will finish and exit, but the parent process may want to wait for the child to finish before it continues. This can be done using the `wait` system call, which blocks the parent process until the child process has finished executing.
 
-```bash
-./script1.sh
-```
+A child process which has finished executing but whose parent has not yet called `wait` is called a "zombie" process. It still has an entry in the process table, but it does not consume any resources and will disappear once the parent process calls `wait` to read its exit status.
 
-(uitleg over het verschil tussen foreground en background processen)
+If the parent process was killed before it could call `wait`, the child process will become an orphan process. Orphan processes are automatically adopted by the `systemd` process (PID 1), which will call `wait` on them when they finish, preventing them from becoming zombies forever.
 
-(voorbeeld: script 1 starten op de voorgrond — terminal bevriest)
+Execute the following script to see how `fork`, `exec`, and `wait` work together:
 
 ```bash
-./script1.sh
+chmod u+x fork-exec-wait.sh
+./fork-exec-wait.sh
 ```
 
-(uitleg: terminal is geblokkeerd zolang het proces loopt, stoppen met Ctrl+C)
+A process can be started in the foreground or in the background. When a process is started in the foreground, it takes control of the terminal and the user cannot execute any other commands until the process finishes.
 
-(voorbeeld: script 1 op de achtergrond starten met &)
+When a process is started in the foreground, it blocks the terminal until it finishes. Try running `sleep` for 10 seconds:
 
 ```bash
-./script1.sh &
+sleep 10
 ```
 
-(uitleg: jobnummer en PID worden getoond, terminal blijft beschikbaar)
+Notice that the terminal is unresponsive for the duration. You can cancel the process early by pressing `Ctrl+C`, which sends a signal to terminate it.
+
+When a process is started in the background, it runs independently of the terminal and you can continue executing other commands while it is running. In bash, you start a process in the background by appending an ampersand (`&`) to the command:
+
+```bash
+sleep 10 &
+```
+
+You will immediately see output like `[1] 3428`, where `[1]` is the job number assigned by the shell and `3428` is the PID of the new process. The terminal remains available and you can keep working. Once the background process finishes, the shell will print a notification like `[1]+  Done  sleep 10` the next time you press Enter.
 
 ## Looking up processes
 
-(uitleg: hoe vind je een lopend proces terug via naam of PID)
+Once a process is running, you often need to find its PID — for example to inspect it, change its priority, or stop it. Start Firefox in the background so it keeps running while you work:
 
 ```bash
-pidof script1.sh
+firefox &
 ```
 
-(uitleg: pidof geeft het PID terug van een proces op basis van zijn naam)
+You can now look up its PID by name using `pidof`:
 
 ```bash
-ps <pid>
+pidof firefox
 ```
 
-(uitleg: details van één specifiek proces opvragen)
+`pidof` returns the PID (or multiple PIDs if several instances are running) of a process by its name. You can then use that PID with `ps` to get more details about the process:
 
-(vraag: zoek het PID van je eigen bash-sessie op)
+```bash
+ps -p $(pidof firefox)
+```
+
+This shows the same columns as `ps -ef`, but filtered to just the process you are interested in. The `$(...)` syntax runs `pidof firefox` first and passes its output as an argument to `ps`.
+
+If you want to search more broadly — for example when you do not know the exact process name — you can use `pgrep`:
+
+```bash
+pgrep -a fire
+```
+
+The `-a` flag also prints the full command line, not just the PID. `pgrep` matches against the process name as a substring, so `fire` is enough to find Firefox.
 
 ## Inspecting /proc
 
