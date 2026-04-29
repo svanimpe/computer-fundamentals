@@ -136,6 +136,8 @@ pstree -p
 
 ## Starting processes
 
+TODO: illustratie van de fork- exec - wait cyclus met een voorbeeldscript
+
 In Linux a process can create child processes using the `fork` system call, which creates a new process that is an exact copy of the parent process. The child process can then replace its memory space with a different program using the `exec` system call.
 
 Both child and parent can do their thing after the fork. Eventually the child process will finish and exit, but the parent process may want to wait for the child to finish before it continues. This can be done using the `wait` system call, which blocks the parent process until the child process has finished executing.
@@ -150,6 +152,8 @@ Execute the following script to see how `fork`, `exec`, and `wait` work together
 chmod u+x fork-exec-wait.sh
 ./fork-exec-wait.sh
 ```
+
+### Foreground vs background processes
 
 A process can be started in the foreground or in the background. When a process is started in the foreground, it takes control of the terminal and the user cannot execute any other commands until the process finishes.
 
@@ -177,7 +181,9 @@ Once a process is running, you often need to find its PID — for example to ins
 firefox &
 ```
 
-You can now look up its PID by name using `pidof`:
+You'll notice that however Firefox is running in the background, it will show the process' output in your terminal. This is because the standard output and error of the process are still connected to the terminal.
+
+You can now look up its PID by name using `pidof` (in a separate terminal):
 
 ```bash
 pidof firefox
@@ -188,6 +194,8 @@ pidof firefox
 ```bash
 ps -p $(pidof firefox)
 ```
+
+TODO: hebben ze $(...) al gezien?
 
 This shows the same columns as `ps -ef`, but filtered to just the process you are interested in. The `$(...)` syntax runs `pidof firefox` first and passes its output as an argument to `ps`.
 
@@ -201,131 +209,260 @@ The `-a` flag also prints the full command line, not just the PID. `pgrep` match
 
 ## Inspecting /proc
 
-(uitleg: /proc is een virtueel bestandssysteem dat de kernel realtime beschikbaar stelt; voor elk actief proces bestaat er een map /proc/PID)
+Every operating system keeps track of all processes running on the system in a process table. Linux exposes this information through a special virtual filesystem called `/proc`. This filesystem contains a directory for each active process, named after its PID. Inside each process directory, there are various files that provide information about the process, such as its status, memory usage, open file descriptors, and more.
+
+Check out the contents of the process directory for one of the Firefox processes you found earlier:
 
 ```bash
 ls /proc/<pid>
 ```
 
-(uitleg: overzicht van de bestanden in de procesmap — elk bestand stelt een eigenschap van het proces voor)
+Each entry in that directory represents a property or resource of the process. The table below covers the most important ones:
+
+| Entry     | Type      | Description                                                                                                        |
+| --------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `cmdline` | file      | The full command used to start the process, with arguments separated by null bytes.                                |
+| `status`  | file      | Human-readable summary: name, PID, PPID, current state, and memory usage figures.                                  |
+| `stat`    | file      | Machine-readable version of the same data, used internally by tools such as `ps` and `top`.                        |
+| `environ` | file      | The environment variables the process was started with, separated by null bytes.                                   |
+| `exe`     | symlink   | Points to the executable binary that was launched.                                                                 |
+| `cwd`     | symlink   | Points to the process's current working directory.                                                                 |
+| `fd/`     | directory | Contains one symlink per open file descriptor (stdin, stdout, stderr, open files, sockets, …).                     |
+| `maps`    | file      | The virtual memory map: which address ranges are in use and what is mapped there (code, heap, stack, shared libs). |
+| `io`      | file      | I/O statistics: how many bytes the process has read from and written to storage since it started.                  |
+| `limits`  | file      | The resource limits in effect for the process (e.g. maximum number of open files, maximum stack size).             |
+| `task/`   | directory | Contains one subdirectory per thread. Each subdirectory has the same layout as the process directory itself.       |
 
 ```bash
 cat /proc/<pid>/status
 ```
 
-(uitleg: toont naam, PID, PPID, status, geheugengebruik en meer van het proces)
+This shows the name, PID, PPID, current state, and memory usage of the process in a readable format. Which of these fields do you recognize from the output of `ps`?
 
 ```bash
 cat /proc/<pid>/cmdline
 ```
 
-(uitleg: het exacte commando waarmee het proces gestart werd)
+This prints the exact command used to launch the process. Because arguments are separated by null bytes rather than spaces, pipe through `tr` to make it readable:
 
-(vraag: open /proc/PID/status van script1. Welke velden herken je uit de uitvoer van ps?)
+```bash
+cat /proc/<pid>/cmdline
+```
 
 ## Stopping processes
 
-(uitleg over signalen: wat zijn het, hoe werken ze)
+In Linux, processes communicate with each other and with the operating system through signals. A signal is a software interrupt — a notification sent to a process to inform it that a specific event has occurred. When a process receives a signal, it can respond in one of three ways:
 
-(tabel met de belangrijkste signalen: SIGTERM, SIGKILL, SIGSTOP, SIGCONT)
+1. **Default action**: Perform the built-in action for that signal (e.g. terminate, stop, or ignore).
+2. **Custom handler**: Execute a function the process registered for that signal, allowing it to clean up before exiting.
+3. **Ignore**: Discard the signal entirely.
 
-(voorbeeld: script 2 — een script dat een lange taak simuleert en SIGTERM opvangt; toont een bericht wanneer het signaal ontvangen wordt en sluit netjes af)
+Signals are identified by both a name (e.g. `SIGTERM`) and a number (e.g. `15`). The most important ones are listed below:
+
+| Signal    | Number | Default action | Description                                                                                                                        |
+| --------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGHUP`  | 1      | Terminate      | Sent when the controlling terminal is closed. Daemons often use it as a trigger to reload their configuration.                     |
+| `SIGINT`  | 2      | Terminate      | Sent when the user presses `Ctrl+C`. Asks the process to stop, but the process can catch and handle it.                            |
+| `SIGTERM` | 15     | Terminate      | The standard way to ask a process to stop. The process can catch the signal, perform cleanup, and then exit gracefully.            |
+| `SIGKILL` | 9      | Terminate      | Forces the kernel to destroy the process immediately. Cannot be caught, ignored, or blocked — there is no opportunity to clean up. |
+| `SIGSTOP` | 19     | Stop           | Pauses the process. Like `SIGKILL`, it cannot be caught or ignored.                                                                |
+| `SIGCONT` | 18     | Continue       | Resumes a process that was previously stopped with `SIGSTOP`.                                                                      |
+
+The `kill` command sends a signal to a process by its PID. Despite its name, it is not limited to terminating processes — it can send any signal. Without a signal specified, it sends `SIGTERM` (15) by default:
 
 ```bash
-./script2.sh &
+kill <pid>         # sends SIGTERM
+kill -9 <pid>      # sends SIGKILL
+kill -SIGSTOP <pid>  # sends SIGSTOP — pauses the process
+kill -SIGCONT <pid>  # sends SIGCONT — resumes it
+```
+
+Try to stop the Firefox process you started earlier using `kill`:
+
+```bash
+kill $(pidof firefox)
+```
+
+### Graceful shutdown with SIGTERM
+
+Start the simulation script in the background:
+
+```bash
+chmod u+x kill-signals.sh
+./kill-signals.sh &
+```
+
+Note the PID printed by the shell, then send `SIGTERM` to it:
+
+```bash
 kill <pid>
 ```
 
-(uitleg: script2 vangt SIGTERM op en sluit netjes af — studenten zien dit in de output)
+`kill-signals.sh` catches `SIGTERM`, prints a message, and exits cleanly. You can observe the output in the terminal — the process has a chance to finish any work in progress before it stops.
 
-(voorbeeld: script 2 starten en forceren te stoppen via SIGKILL — het script kan het signaal niet opvangen)
+### Forced termination with SIGKILL
+
+Start the script again and this time send `SIGKILL`:
 
 ```bash
-./script2.sh &
+./kill-signals.sh &
 kill -9 <pid>
 ```
 
-(uitleg: SIGKILL omzeilt de signaalafhandeling van het proces volledig — geen nette afsluiting mogelijk)
+The process is destroyed by the kernel immediately, with no opportunity to run a cleanup handler. You will not see the graceful-shutdown message this time.
 
-(vraag: wat is het verschil tussen kill en kill -9?)
+<details>
+  <summary>
+  When should we use <code>kill &lt;pid&gt;</code> versus <code>kill -9 &lt;pid&gt;</code>?
+  </summary>
+
+`kill <pid>` sends **SIGTERM** (15): the process receives the signal and can handle it — running cleanup code, flushing buffers, closing connections — before it exits. The process can also choose to ignore it entirely.
+
+`kill -9 <pid>` sends **SIGKILL** (9): the kernel destroys the process immediately, bypassing any signal handler. There is no cleanup, no graceful shutdown, no way for the process to refuse.
+
+Always try `kill <pid>` first. Well-written processes handle SIGTERM correctly and exit cleanly. Fall back to `kill -9 <pid>` only if the process does not respond — for example if it is frozen or stuck in an infinite loop ignoring signals. Be aware that a SIGKILL'd process may leave behind partial writes, open sockets, or lock files that need manual cleanup.
+</details>
 
 ## Process priorities
 
-(uitleg over nice values: schaal van -20 tot +19, standaard 0)
+Not all processes are equally important. A video call needs the CPU more urgently than a background backup job. Linux lets you express this with a **nice value**: a number from `-20` (highest priority) to `+19` (lowest priority), defaulting to `0`. The name comes from the idea that a process with a high nice value is being "nice" to others by stepping aside.
 
-(voorbeeld: script 3 — een CPU-intensief script dat continu rekent, zodat het effect van de nice-waarde zichtbaar is in htop)
+The scheduler uses the nice value to derive an effective priority (`PR` column in `htop` and `ps`). A lower nice value means higher priority and more CPU time. Only root can set a negative nice value; any user can make their own processes *less* important by raising it.
 
-```bash
-./script3.sh &
-ps -el | grep script3
-```
-
-(uitleg: NI-kolom toont de nice waarde, PR-kolom de effectieve prioriteit)
+Start the CPU-intensive script in the background and inspect its priority:
 
 ```bash
-nice -n 10 ./script3.sh &
+chmod u+x kill-signals.sh
+./kill-signals.sh &
+ps -lp <pid>
 ```
+
+Look at the `NI` column (the nice value) and the `PRI`/`PR` column (the effective priority). Both should show the defaults (`0` and `80` respectively).
+
+### Starting a process with a different priority
+
+Use `nice -n <value>` to launch a process with a non-default nice value from the start:
+
+```bash
+nice -n 10 ./kill-signals.sh &
+ps -lp <pid>
+```
+
+Open `htop` and compare the two running instances — you will see different values in the `NI` column.
+
+### Changing the priority of a running process
+
+Use `renice` to adjust the nice value of a process that is already running:
 
 ```bash
 renice 5 -p <pid>
 ```
 
-(uitleg: prioriteit aanpassen van een lopend proces; alleen root kan negatieve waarden instellen)
+This sets the nice value of the given PID to `5`. You can verify the change immediately in `htop` or with `ps -lp <pid>`.
+
+Note that you can only raise your own processes' nice value (make them less important). Lowering a nice value below `0` — giving a process higher priority than the default — requires root:
+
+```bash
+sudo renice -5 -p <pid>
+```
+
+<details>
+<summary>Why can only root lower nice values? What could go wrong if any user could give their process the highest priority?</summary>
+
+If any user could set a negative nice value, a single process could starve every other process on the system — including critical system services — by monopolising the CPU. For example, a malicious or runaway user process at nice `-20` would be scheduled far ahead of `systemd`, `sshd`, and the kernel threads that keep the system responsive. Restricting negative nice values to root ensures that only a privileged administrator can grant elevated scheduling priority, preserving system stability for all users.
+
+</details>
 
 ## Concurrency
 
-(uitleg: wat is concurrency, waarom ontstaan race conditions bij gedeelde bronnen)
+When multiple processes run at the same time and access shared resources, things can go wrong in subtle ways. **Concurrency** is the ability of a system to handle multiple tasks that overlap in time — either truly in parallel on multiple CPU cores, or interleaved on a single core. The tricky part is not running tasks simultaneously; it is doing so safely when those tasks share state.
 
-(voorbeeld: script 4 — een bash-script dat een teller leest uit een bestand, ophoogt en terugschrijft; meerdere instanties worden tegelijk op de achtergrond gestart; de eindwaarde is lager dan verwacht door de race condition)
+A **race condition** occurs when the outcome depends on the relative timing of two or more processes. If process A reads a value, and process B reads and updates the same value before A has finished writing, A will overwrite B's update — one increment is lost. This kind of bug is notoriously hard to reproduce because it depends on exact scheduling order, which varies between runs.
+
+### Demonstrating a race condition
+
+`counter-unsafe.sh` reads a counter from `counter.txt`, adds one, and writes it back. Launch 50 instances simultaneously and wait for them all to finish:
 
 ```bash
-# start N instanties tegelijk op de achtergrond
-for i in $(seq 1 50); do ./script4.sh & done
+echo 0 > counter.txt
+chmod u+x counter-unsafe.sh
+for i in $(seq 1 50); do ./counter-unsafe.sh & done
 wait
+```
+
+Now wait until all instances have finished and check the final value.
+
+```bash
 cat counter.txt
 ```
 
-(uitleg: elke instantie leest dezelfde waarde voordat een andere heeft kunnen schrijven — de verhogingen gaan verloren)
+<details>
+<summary>If 50 instances each increment the counter once, what would you expect the final value to be? What do you actually see, and why?</summary>
 
-(vraag: als 50 instanties elk de teller 1 keer ophogen, wat zou de verwachte eindwaarde zijn? Wat zie je in werkelijkheid? Waarom?)
+You would expect `50`. In practice the value is almost always lower — often significantly so. Each instance reads the current value, computes `value + 1`, and writes it back. If two instances read the same value before either has written, they both write the same result and one increment is lost. The more instances run in parallel, the worse the loss.
 
-(voorbeeld: script 5 — zelfde als script 4 maar gebruikt een lockfile als mutex; slechts één instantie tegelijk mag de teller lezen en schrijven)
+</details>
+
+### Fixing it with a lock file
+
+`counter-safe.sh` wraps the same read-increment-write sequence in a **lock file**: before touching the counter it tries to create a file exclusively; if the file already exists, it waits and retries. Only one instance can hold the lock at a time, so the counter is always updated atomically.
 
 ```bash
-for i in $(seq 1 50); do ./script5.sh & done
+echo 0 > counter.txt
+chmod u+x counter-safe.sh
+for i in $(seq 1 50); do ./counter-safe.sh & done
 wait
+```
+
+Now wait until all instances have finished and check the final value.
+
+```bash
 cat counter.txt
 ```
 
-(uitleg: de lockfile zorgt voor mutual exclusion — de eindwaarde is nu correct)
+The result should now be exactly `50`.
 
-(vraag: wat is het nadeel van een lockfile als mutex? Wat kan er misgaan als een script crasht terwijl het de lock vasthoudt?)
+<details>
+<summary>What is the downside of a lock file as a mutex? What can go wrong if a script crashes while holding the lock?</summary>
+
+If the process holding the lock crashes before it can remove the lock file, the file remains on disk. Every other instance will then wait forever — a **deadlock**. A robust solution adds cleanup logic: for example, trapping signals to delete the lock file before exiting, or storing the holder's PID inside the lock file so other instances can detect whether the holder is still alive.
+
+</details>
 
 ## Threads
 
-(uitleg: wat is een thread, verschil met een proces, gedeeld geheugen als voordeel én risico)
+A **thread** is a unit of execution that lives inside a process. Where two processes have completely separate address spaces, threads within the same process share the same memory. This makes communication between threads much cheaper than between processes — no file, pipe, or socket needed — but it also means a bug in one thread can corrupt data that every other thread relies on.
 
-(voorbeeld: script 6 — een Python-script met twee threads die zonder locking een gedeelde variabele ophogen; toont de verkeerde eindwaarde; mirrors de race condition van script 4 maar nu binnen één proces)
+Each thread has its own stack and program counter, but shares the heap, global variables, and open file descriptors with all other threads in the process. The operating system schedules threads the same way it schedules processes, so multiple threads can run truly in parallel on multiple CPU cores.
 
-```bash
-python3 script6.py
-```
+### Race condition between threads
 
-(uitleg: threads delen hetzelfde geheugen, waardoor de race condition nog sneller optreedt dan bij processen)
-
-(voorbeeld: script 7 — zelfde als script 6 maar gebruikt threading.Lock; eindwaarde is correct; mirrors script 5)
+The race condition from the concurrency section can happen just as easily inside a single process. `threads-unsafe.py` spawns a number of threads that all increment a shared counter — without any coordination:
 
 ```bash
-python3 script7.py
+python3 threads-unsafe.py
 ```
 
-(uitleg: threading.Lock werkt als een mutex op geheugeniveau — efficiënter dan een lockfile maar zelfde principe)
-(TODO: is mutex niet teveel out of scope?)
+The final value will be lower than expected for exactly the same reason as before: one thread reads the counter, another thread reads and updates it before the first has written back, and an increment is lost.
 
-(voorbeeld: script 8 — een Python-script dat een tijdrovende taak eerst sequentieel uitvoert en daarna met threads; toont de uitvoertijd van beide aanpakken + illustratie dat er een limiet is aan de snelheidstoename door threads)
+### Fixing it with a lock
+
+`threads-safe.py` wraps the increment in a `threading.Lock`. A lock is the in-memory equivalent of the lock file from the previous section: only one thread can hold it at a time, so the read-modify-write sequence becomes atomic.
 
 ```bash
-python3 script8.py
+python3 threads-safe.py
 ```
 
-(uitleg: threads zijn nuttig wanneer taken onafhankelijk van elkaar zijn en kunnen overlappen, bv. bij I/O-wachttijden)
+The result is now correct. The lock is more efficient than a lock file — it lives in memory rather than on disk — but the principle is identical: mutual exclusion ensures that only one thread touches the shared state at a time.
+
+### Threads and I/O
+
+Threads are most valuable when tasks spend time waiting rather than computing. `threads-io.py` simulates a number of slow network requests, first sequentially and then with one thread per request:
+
+```bash
+python3 threads-io.py
+```
+
+While one thread is blocked waiting for a response, the scheduler runs another thread. The threaded version finishes in roughly the time of a single request rather than the sum of all of them.
+
+> When you run `threads-io.py`, how does the threaded runtime compare to the sequential runtime? Does the speedup grow indefinitely as you add more threads?
