@@ -35,7 +35,8 @@ export default withMermaid({
   markdown: {
     container: {
       infoLabel: "Note",
-      tipLabel: "Tip"
+      tipLabel: "Tip",
+      warningLabel: "Warning",
     }
   },
   mermaid: {

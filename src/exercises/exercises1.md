@@ -6,7 +6,7 @@ These exercises are still in draft. The text isn't polished yet and new exercise
 
 In these exercises, you'll continue exploring Ubuntu. You'll try out a few apps, install new software, and customize the desktop to your preferences.
 
-## Exercise 1.1
+## Exercise 1.1 {#firefox}
 
 Open the Firefox web browser:
 
