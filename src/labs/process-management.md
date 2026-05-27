@@ -72,27 +72,52 @@ htop
 
 As you can see in `htop`, each process has a PID. The PID is a unique identifier assigned to each process by the operating system. It is used to manage and track processes, allowing you to perform actions such as sending signals (e.g. to stop a process) or changing its priority.
 
-(TODO: de sectie hieronder staat wat los van de rest)
-
 You'll also see a column "TIME+" in `htop`, which shows the total CPU time consumed by the process since it started. You might notice that some process have a value of 0:00.00 in this column, which means that they have not consumed any CPU time yet. This can happen if the process is sleeping or waiting for an event, or if it has just started and has not had a chance to execute any instructions.
+
+## Process states
+
+At any given moment, a process is in one of several states. You can see the state of each process in the `S` column in `htop`.
+
+| State                                | Code | Description                                                                                                                                                                     |
+| ------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Running                              | `R`  | The process is currently being executed by the CPU, or is in the run queue waiting to be executed.                                                                              |
+| Sleeping                             | `S`  | The process is waiting for an event (e.g. user input, a timer, or data from disk). It will become runnable again once the event occurs.                                         |
+| Uninterruptible sleep                | `D`  | Similar to sleeping, but the process cannot be interrupted by signals. This usually happens when the process is waiting for I/O (e.g. reading from disk).                       |
+| Stopped                              | `T`  | The process has been paused, typically by a signal such as `SIGSTOP`. It will not execute until it receives a `SIGCONT` signal.                                                 |
+| Zombie                               | `Z`  | The process has finished executing, but its entry is still in the process table because its parent has not yet read its exit status. Zombies consume no resources and disappear |
+| once the parent reads the exit code. |
+
+(TODO: btop in exercise?)
+
+## Scheduling
 
 The operating systems scheduler is responsible for allocating CPU time to processes. It uses various algorithms to determine which process should run next based on factors such as priority, CPU usage, and waiting time. When a process is scheduled to run, it is given access to the CPU and can execute its instructions. If a process is sleeping or waiting for an event, it will not consume CPU time until it becomes active again.
 
 In the meantime the process state is kept in memory. When the process becomes active again, all necessary information is retrieved from memory, moved over to the CPU and the process can continue executing from where it left off. This is how the operating system manages multiple processes and allows them to share the CPU effectively.
 
-### Process states
+### Scheduling algorithms
 
-At any given moment, a process is in one of several states. You can see the state of each process in the `S` column in `htop`.
+(TODO: schematische voorstelling van scheduling?)
 
-| State                 | Code | Description                                                                                                                                                                                                          |
-| --------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Running               | `R`  | The process is currently being executed by the CPU, or is in the run queue waiting to be executed.                                                                                                                   |
-| Sleeping              | `S`  | The process is waiting for an event (e.g. user input, a timer, or data from disk). It will become runnable again once the event occurs.                                                                              |
-| Uninterruptible sleep | `D`  | Similar to sleeping, but the process cannot be interrupted by signals. This usually happens when the process is waiting for I/O (e.g. reading from disk).                                                            |
-| Stopped               | `T`  | The process has been paused, typically by a signal such as `SIGSTOP`. It will not execute until it receives a `SIGCONT` signal.                                                                                      |
-| Zombie                | `Z`  | The process has finished executing, but its entry is still in the process table because its parent has not yet read its exit status. Zombies consume no resources and disappear once the parent reads the exit code. |
+Scheduling algorithms differ primarily in one dimension: whether they allow the scheduler to interrupt a running process.
 
-(TODO: btop in exercise?)
+#### Non-preemptive scheduling
+
+In non-preemptive scheduling, once a process is given the CPU it runs until it either finishes or voluntarily yields. This simplifies the scheduler but hurts responsiveness — a single long-running process can block everything else.
+
+Common non-preemptive algorithms:
+
+- **First-Come, First-Served (FCFS)**: Processes are run in arrival order. Simple, but can cause long wait times when a slow process lands at the front of the queue.
+- **Shortest Process Next (SPN)**: The process with the shortest expected execution time runs next. Minimizes average wait time, but longer processes can be starved indefinitely if short ones keep arriving.
+
+#### Preemptive scheduling
+
+In preemptive scheduling, the scheduler can pause a running process and switch to another one. This keeps the system responsive and prevents any single process from monopolizing the CPU.
+
+Common preemptive algorithms:
+
+- **Shortest Remaining Time (SRT)**: The preemptive variant of SPN. If a newly arrived process has a shorter remaining time than the current one, the scheduler immediately switches to it.
+- **Round Robin (RR)**: Each process gets a fixed time slice (e.g. 100 ms). If it doesn't finish in time, it is preempted and moved to the back of the ready queue, giving every process a fair turn.
 
 ## Booting the system
 
