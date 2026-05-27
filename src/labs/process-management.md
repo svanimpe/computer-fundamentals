@@ -78,14 +78,13 @@ You'll also see a column "TIME+" in `htop`, which shows the total CPU time consu
 
 At any given moment, a process is in one of several states. You can see the state of each process in the `S` column in `htop`.
 
-| State                                | Code | Description                                                                                                                                                                     |
-| ------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Running                              | `R`  | The process is currently being executed by the CPU, or is in the run queue waiting to be executed.                                                                              |
-| Sleeping                             | `S`  | The process is waiting for an event (e.g. user input, a timer, or data from disk). It will become runnable again once the event occurs.                                         |
-| Uninterruptible sleep                | `D`  | Similar to sleeping, but the process cannot be interrupted by signals. This usually happens when the process is waiting for I/O (e.g. reading from disk).                       |
-| Stopped                              | `T`  | The process has been paused, typically by a signal such as `SIGSTOP`. It will not execute until it receives a `SIGCONT` signal.                                                 |
-| Zombie                               | `Z`  | The process has finished executing, but its entry is still in the process table because its parent has not yet read its exit status. Zombies consume no resources and disappear |
-| once the parent reads the exit code. |
+| State                 | Code | Description                                                                                                                                                                                                          |
+| --------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Running               | `R`  | The process is currently being executed by the CPU, or is in the run queue waiting to be executed.                                                                                                                   |
+| Sleeping              | `S`  | The process is waiting for an event (e.g. user input, a timer, or data from disk). It will become runnable again once the event occurs.                                                                              |
+| Uninterruptible sleep | `D`  | Similar to sleeping, but the process cannot be interrupted by signals. This usually happens when the process is waiting for I/O (e.g. reading from disk).                                                            |
+| Stopped               | `T`  | The process has been paused, typically by a signal such as `SIGSTOP`. It will not execute until it receives a `SIGCONT` signal.                                                                                      |
+| Zombie                | `Z`  | The process has finished executing, but its entry is still in the process table because its parent has not yet read its exit status. Zombies consume no resources and disappear once the parent reads the exit code. |
 
 (TODO: btop in exercise?)
 

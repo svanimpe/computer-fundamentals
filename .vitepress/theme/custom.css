@@ -1,0 +1,5 @@
+/* Center diagrams */
+.mermaid {
+    display: block flex;
+    justify-content: center;
+}

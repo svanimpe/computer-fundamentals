@@ -1,6 +1,7 @@
-import { defineConfig } from "vitepress"
+import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
 
-export default defineConfig({
+export default withMermaid({
   title: "Computer Fundamentals",
   description: "",
   srcDir: "src",
@@ -47,5 +48,8 @@ export default defineConfig({
       infoLabel: "Note",
       tipLabel: "Tip"
     }
+},
+  mermaid: {
+    
   }
 })
