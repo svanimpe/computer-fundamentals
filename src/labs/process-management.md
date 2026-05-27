@@ -136,22 +136,11 @@ pstree -p
 
 ## Starting processes
 
-TODO: illustratie van de fork- exec - wait cyclus met een voorbeeldscript
+When you run a command in the terminal, the shell starts a new child process to execute it. For example, running `firefox` launches the Firefox browser as a child of the shell process.
 
-In Linux a process can create child processes using the `fork` system call, which creates a new process that is an exact copy of the parent process. The child process can then replace its memory space with a different program using the `exec` system call.
+The new process inherits certain properties from its parent, such as environment variables and open file descriptors, and can receive additional arguments at start-up. The operating system also allocates dedicated resources for it, such as memory and CPU time.
 
-Both child and parent can do their thing after the fork. Eventually the child process will finish and exit, but the parent process may want to wait for the child to finish before it continues. This can be done using the `wait` system call, which blocks the parent process until the child process has finished executing.
-
-A child process which has finished executing but whose parent has not yet called `wait` is called a "zombie" process. It still has an entry in the process table, but it does not consume any resources and will disappear once the parent process calls `wait` to read its exit status.
-
-If the parent process was killed before it could call `wait`, the child process will become an orphan process. Orphan processes are automatically adopted by the `systemd` process (PID 1), which will call `wait` on them when they finish, preventing them from becoming zombies forever.
-
-Execute the following script to see how `fork`, `exec`, and `wait` work together:
-
-```bash
-chmod u+x fork-exec-wait.sh
-./fork-exec-wait.sh
-```
+Every process is assigned a unique **Process ID (PID)** by the kernel, along with a **Parent Process ID (PPID)** that links it back to the process that created it.
 
 ### Foreground vs background processes
 
