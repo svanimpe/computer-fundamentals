@@ -1,337 +1,297 @@
-# Process management
+# Process Management
 
-## Learning objectives
+In this lab, you’ll learn how an operating system runs applications.
 
-In this lab assignment you will learn:
+You’ll learn about **processes**, their life cycle, and how you can monitor their activity. Understanding how processes work and how to manage them is crucial for system administration, performance optimization, and troubleshooting.
 
-- Query and interpret an overview of active processes
-- View the hierarchical structure of processes
-- Start processes in the foreground and background
-- Look up a running process by name or PID
-- Stop a process using a kill signal
+## Processes
 
-## Introduction
+When you compile the source code for an application, the compiler outputs an executable file that contains instructions for the CPU. When you run this file, the operating system creates a **process**. This process represents a running instance of the application and is responsible for executing its code and managing its resources. You can run the same application multiple times; each run creates a new process.
 
-Processes are the fundamental units of execution in an operating system. They represent running instances of programs and are responsible for executing code, managing resources, and performing tasks on behalf of users and applications. Understanding how processes work and how to manage them is crucial for system administration, performance optimization, and troubleshooting.
-
-## What is a process?
-
-(TODO: stuk over compileren? compileren staat ook bij OS)
-
-A process is an instance of a running program. When you execute a command in the terminal, the operating system creates a new process to run that command. When you execute the same command multiple times, each execution creates a separate process sharing the same program code but with its own memory space and execution context.
+The operating system tracks the state of every process in a **process table** and provides processes with the resources they need to run their code, most notably **memory** and **CPU time**.
 
 ### Address space
 
-When creating a process, the operating system reserves a block of memory for it, which includes the program code, data, and stack. This memory is called the "address space". The address space typically contains the following segments:
+The operating system reserves a piece of memory for every process it creates. This memory is known as the **address space** of the process and is divided into segments:
 
-- Stack: temporary storage for variables, function parameters, return addresses from functions, etc. If there is no more space on the stack, due to for example too deep or infinite recursion, one gets the infamous stack overflow error.
-- Heap: dynamically allocated memory. If something is too large to place on the stack, or if something needs to be available across function boundaries, the stack is not a viable option. In that case, the heap can be used to dynamically allocate something. The heap does not work like a stack: what is stored there remains available until it is cleaned up by the programmer.
-- Data: global variables.
-- Text: the instructions to be executed.
+- The **text** segment contains instructions for the CPU, loaded from the executable file. This segment is read-only, so processes running the same executable can share a text segment.
+- The **data** segment contains global and static variables used by the executable.
+- The **stack** segment is used to implement function calls and is managed by the CPU. Every time the CPU encounters a function call, it reserves enough memory on the stack to store that function’s parameters, local variables, and return address. When the function ends, its memory is removed from the stack.
+- The **heap** segment stores data whose lifetime is not bound to a single function and data that is too large to be put on the stack. Some programming languages require the programmer to manually allocate and free heap memory; other languages rely on reference counting or garbage collection to manage the heap for you. 
 
-Keep in mind that the address space may differ between operating systems and architectures, but the general concept of separate memory segments for code, data, and stack is common across most systems.
+The organization of the address space may differ between operating systems and hardware architectures, but these segments are common across most systems.
 
-The process also has a state (running, sleeping, stopped, etc.) and may have child processes that it has spawned.
+### Virtual memory
 
-## Querying active processes
+Operating systems rely on **virtual memory** to improve their security and stability. With virtual memory, processes are assigned a virtual address space whose addresses do not directly correspond with physical memory locations. This virtual address space gives each process the illusion of having exclusive access to the entire memory, while in reality, it can only access a small part of it.
 
-(intro tot het bekijken van actieve processen via ps, top, htop, btop)
+The operating system works together with the **memory management unit (MMU)** of the CPU to translate virtual addresses into physical addresses. This layer of indirection ensures that processes cannot access memory assigned to other processes.
 
-In Linux, you can use various commands to view active processes and their details. The most basic command is `ps`, which provides a snapshot of the current processes. The `-e` flag shows all processes, and the `-f` flag provides a full-format listing with additional details (e.g. the command that started the process, the user who owns it, etc.).
+### Scheduling
+
+Processes need access to the CPU to execute their instructions. However, a CPU only has a small number of execution cores, limiting the number of processes it can execute in parallel. When the number of processes exceeds the number of execution cores, processes take turns sharing the CPU.
+
+Operating systems use a **scheduler** to allocate CPU time to processes. Schedulers can handle a large number of processes and use various algorithms to balance fairness with overall system performance.
+
+A scheduler starts by checking the state of each process:
+
+- A process is in the **running** state when it’s able to continue executing. A running process is either executing on the CPU or waiting in the run queue. In both cases, the process is eligible to be scheduled for CPU time.
+- A process is in the **sleeping** state when it’s waiting for an event. It may be waiting for input from the user, a timer to run out, or data to become available. A sleeping process is blocked and is unable to continue executing until the event it’s waiting for occurs. At that time, the process will rejoin the run queue.
+   
+The scheduler considers all running processes, determines the next process to execute, and allocates it CPU time.
+
+When the time comes to execute the next process, the operating system performs a **context switch**:
+
+1. The currently executing process is paused.
+2. The operating system stores the current state of the CPU in the process table, so the paused process can be resumed later.
+3. The operating system loads the state of the next process from the process table and configures the CPU.
+4. The CPU resumes executing.
+
+Rapidly switching between processes creates the illusion that all processes are executing simultaneously. However, context switches are expensive operations for the CPU and they can reduce system performance. Schedulers must balance these factors and optimize the number of context switches.
+
+Schedulers must also prevent any single process from monopolizing the CPU. Most schedulers are **preemptive**: they can pause a running process when it has used up its allocated CPU time. A non-preemptive scheduler must wait until a process finishes executing, goes to sleep, or voluntarily yields the CPU.
+
+An example of preemptive scheduling is **round robin**. This algorithm allocates each process a fixed time slice (e.g. 100ms) and preempts a process when its time is up. Processes that finish their turn move to the back of the queue and wait until all other processes are given a turn before resuming their work.
+
+This algorithm seems fair but performs poorly in most real-world scenarios. Linux implements a far more advanced scheduling algorithm that uses variable time slices and takes into account the weight or priority of a process, the amount of CPU time it has used so far, and whether or not the process is interactive and requires quick response times.
+
+## Process overview
+
+A Linux distribution includes many useful commands to look up processes and monitor their activity.
+
+The **`ps`** (*process status*) command lists active processes:
 
 ```bash
-ps -ef
+ps
 ```
 
-The output of `ps -ef` contains several columns:
+The output of `ps` contains the following columns:
 
-| Column | Description                                                                                        |
-| ------ | -------------------------------------------------------------------------------------------------- |
-| UID    | The user ID of the process owner                                                                   |
-| PID    | The unique process identifier                                                                      |
-| PPID   | The parent process ID — the PID of the process that created this one                               |
-| C      | CPU utilization (percentage)                                                                       |
-| STIME  | The time at which the process started                                                              |
-| TTY    | The terminal associated with the process (`?` means no terminal, i.e. a background system process) |
-| TIME   | Total CPU time consumed by the process                                                             |
-| CMD    | The command that started the process                                                               |
+| Column | Description |
+| ------ | ----------- |
+| PID    | The **Process ID**, a unique identifier for the process. |
+| TTY    | The terminal (“teletype”) associated with the process.<br>Background processes show a question mark (`?`) in this column. |
+| TIME   | The total CPU time consumed by the process since it started. |
+| CMD    | The executable or command this process is running. |
 
-Another useful command is `top`, which provides a real-time, interactive view of the system's processes. It shows CPU and memory usage, as well as other details about each process. You can sort processes by different criteria (e.g. CPU usage, memory usage) and interact with them (e.g. kill a process directly from the interface).
+By default, `ps` only shows processes in your current session. Add the `-e` option to see every process on the system:
+
+```bash
+ps -e
+```
+
+You may be surprised to see how many processes are active on your system.
+
+The **`top`** command displays process activity in real-time:
 
 ```bash
 top
 ```
 
-Try typing `?` while in `top` to see the available commands and options. You'll quickly notice that the interface is not very user-friendly, which is where `htop` comes in. `htop` is an improved version of `top` with a more intuitive interface, color coding, and additional features.
+`top` shows a lot of information. For now, focus on the following columns:
 
-```bash
-sudo apt install -y htop
+| Column  | Description |
+| ------- | ----------- |
+| PID     | The Process ID. |
+| USER    | The user that owns this process. |
+| RES     | The amount of memory being used by the process (“resident memory”).<br>Press `e` to display this amount in a different unit. |
+| S       | The current state of the process.<br>`R` indicates a running process.<br>`S` indicates a sleeping process.|
+| %CPU    | The percentage of CPU time being used by the process.<br>This can exceed 100% if the process uses multiple CPU cores.<br>Press `P` to sort by this amount. |
+| %MEM    | The percentage of memory being used by the process.<br>Press `M` to sort by this amount. |
+| TIME+   | The total CPU time consumed by the process since it started.<br>Press `T` to sort by this amount. |
+| CMD     | The executable or command this process is running. |
 
-htop
-```
+When you’re done, press `q` to quit `top`.
 
-As you can see in `htop`, each process has a PID. The PID is a unique identifier assigned to each process by the operating system. It is used to manage and track processes, allowing you to perform actions such as sending signals (e.g. to stop a process) or changing its priority.
-
-You'll also see a column "TIME+" in `htop`, which shows the total CPU time consumed by the process since it started. You might notice that some process have a value of 0:00.00 in this column, which means that they have not consumed any CPU time yet. This can happen if the process is sleeping or waiting for an event, or if it has just started and has not had a chance to execute any instructions.
-
-## Process states
-
-At any given moment, a process is in one of several states. You can see the state of each process in the `S` column in `htop`.
-
-| State                 | Code | Description                                                                                                                                                                                                          |
-| --------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Running               | `R`  | The process is currently being executed by the CPU, or is in the run queue waiting to be executed.                                                                                                                   |
-| Sleeping              | `S`  | The process is waiting for an event (e.g. user input, a timer, or data from disk). It will become runnable again once the event occurs.                                                                              |
-| Uninterruptible sleep | `D`  | Similar to sleeping, but the process cannot be interrupted by signals. This usually happens when the process is waiting for I/O (e.g. reading from disk).                                                            |
-| Stopped               | `T`  | The process has been paused, typically by a signal such as `SIGSTOP`. It will not execute until it receives a `SIGCONT` signal.                                                                                      |
-| Zombie                | `Z`  | The process has finished executing, but its entry is still in the process table because its parent has not yet read its exit status. Zombies consume no resources and disappear once the parent reads the exit code. |
-
-(TODO: btop in exercise?)
-
-## Scheduling
-
-The operating systems scheduler is responsible for allocating CPU time to processes. It uses various algorithms to determine which process should run next based on factors such as priority, CPU usage, and waiting time. When a process is scheduled to run, it is given access to the CPU and can execute its instructions. If a process is sleeping or waiting for an event, it will not consume CPU time until it becomes active again.
-
-In the meantime the process state is kept in memory. When the process becomes active again, all necessary information is retrieved from memory, moved over to the CPU and the process can continue executing from where it left off. This is how the operating system manages multiple processes and allows them to share the CPU effectively.
-
-### Scheduling algorithms
-
-(TODO: schematische voorstelling van scheduling?)
-
-Scheduling algorithms differ primarily in one dimension: whether they allow the scheduler to interrupt a running process.
-
-#### Non-preemptive scheduling
-
-In non-preemptive scheduling, once a process is given the CPU it runs until it either finishes or voluntarily yields. This simplifies the scheduler but hurts responsiveness — a single long-running process can block everything else.
-
-Common non-preemptive algorithms:
-
-- **First-Come, First-Served (FCFS)**: Processes are run in arrival order. Simple, but can cause long wait times when a slow process lands at the front of the queue.
-- **Shortest Process Next (SPN)**: The process with the shortest expected execution time runs next. Minimizes average wait time, but longer processes can be starved indefinitely if short ones keep arriving.
-
-#### Preemptive scheduling
-
-In preemptive scheduling, the scheduler can pause a running process and switch to another one. This keeps the system responsive and prevents any single process from monopolizing the CPU.
-
-Common preemptive algorithms:
-
-- **Shortest Remaining Time (SRT)**: The preemptive variant of SPN. If a newly arrived process has a shorter remaining time than the current one, the scheduler immediately switches to it.
-- **Round Robin (RR)**: Each process gets a fixed time slice (e.g. 100 ms). If it doesn't finish in time, it is preempted and moved to the back of the ready queue, giving every process a fair turn.
-
-## Booting the system
-
-When the computer is powered on, it goes through a boot process that initializes the hardware and starts the operating system. The boot process typically involves several stages:
-
-1. **BIOS/UEFI**: The Basic Input/Output System (BIOS) or Unified Extensible Firmware Interface (UEFI) is the first code that runs when the computer is powered on. It performs hardware initialization and checks for a bootable device. It searches for a bootloader on the storage devices (e.g. hard drive, SSD) and loads it into memory.
-2. **Bootloader**: The bootloader (e.g. GRUB in the case of Linux) is responsible for loading the operating system kernel into memory and transferring control to it.
-3. **Unpacking the kernel and initramfs**: The kernel and initramfs are compressed to save space on disk and are unpacked into memory during the boot process. The initramfs (initial RAM filesystem) is a temporary root filesystem loaded into memory before the real root filesystem is available. It contains the minimal tools and drivers needed to mount the actual root filesystem, after which it is discarded.
-4. **Kernel initialization**: The bootloader transfers control to the kernel, which initializes the hardware and sets up the necessary data structures for managing processes, memory, and devices.
-5. **Starting the init system**: The kernel starts the init system (e.g. systemd), which is responsible for starting and managing all other processes on the system. The init system reads its configuration files to determine which services and processes to start at boot time. The init system is the first process started by the kernel and is assigned PID 1. Every other process on the system is a descendant of this process, making it the root of the entire process tree.
-
-On Linux, the files involved in the boot process can be found in the `/boot` directory. This directory contains the kernel, initramfs, and the bootloader configuration files, among others.
-
-```bash
-ls -l /boot
-```
-
-In `/boot` you'll typically find the following files:
-
-- `vmlinuz-<version>`: The compressed Linux kernel image.
-- `initrd.img-<version>`: The initramfs image.
-- `grub/`: A directory containing the GRUB bootloader configuration files and modules.
-
-## Process hierarchy
-
-`systemd` is the init system used by many Linux distributions. It is responsible for starting and managing all other processes on the system. Since `systemd` is the first process started by the kernel, it has PID 1 and is the root of the entire process tree. All other processes on the system are descendants of `systemd`, either directly or indirectly.
-
-The process hierarchy can be visualized as a tree structure, where `systemd` is the root and all other processes are branches stemming from it.
-
-```bash
-pstree
-```
-
-(TODO: schematische voorstelling van een process tree via mermaid?)
-
-When you pass the `-p` flag to `pstree`, it will show the PID of each process in parentheses next to its name. This can help you understand the parent-child relationships between processes and identify which processes are running under which parents. It will enlarge the output as `pstree` will by default merge identical processes into a single line with a count.
-
-```bash
-pstree -p
-```
+::: info
+`top` is not very user-friendly. Most users prefer an alternative command, such as **`htop`**, which provides a more intuitive interface, color coding, and additional features. You’ll install and use `htop` in [Exercise 6.3](../exercises/exercises6#htop).
+:::
 
 ## Starting processes
 
-When you run a command in the terminal, the shell starts a new child process to execute it. For example, running `firefox` launches the Firefox browser as a child of the shell process.
+Every time you run a command in the terminal or start an application through the graphical user interface, the operating system creates a new process and assigns it a unique PID.
 
-The new process inherits certain properties from its parent, such as environment variables and open file descriptors, and can receive additional arguments at start-up. The operating system also allocates dedicated resources for it, such as memory and CPU time.
-
-Every process is assigned a unique **Process ID (PID)** by the kernel, along with a **Parent Process ID (PPID)** that links it back to the process that created it.
-
-### Foreground vs background processes
-
-A process can be started in the foreground or in the background. When a process is started in the foreground, it takes control of the terminal and the user cannot execute any other commands until the process finishes.
-
-When a process is started in the foreground, it blocks the terminal until it finishes. Try running `sleep` for 10 seconds:
+For example, start Firefox by clicking its icon in the dock, then run the following command:
 
 ```bash
-sleep 10
+ps -e | grep firefox
 ```
 
-Notice that the terminal is unresponsive for the duration. You can cancel the process early by pressing `Ctrl+C`, which sends a signal to terminate it.
+This command uses `grep` to find the newly created process in the output of `ps`.
 
-When a process is started in the background, it runs independently of the terminal and you can continue executing other commands while it is running. In bash, you start a process in the background by appending an ampersand (`&`) to the command:
+Next, quit Firefox, then run it again from the command line:
 
 ```bash
-sleep 10 &
+firefox
 ```
 
-You will immediately see output like `[1] 3428`, where `[1]` is the job number assigned by the shell and `3428` is the PID of the new process. The terminal remains available and you can keep working. Once the background process finishes, the shell will print a notification like `[1]+  Done  sleep 10` the next time you press Enter.
+This command starts Firefox as a **foreground** process. A foreground process remains in control of the terminal. You cannot execute any commands until the process finishes.
 
-## Looking up processes
-
-Once a process is running, you often need to find its PID — for example to inspect it, change its priority, or stop it. Start Firefox in the background so it keeps running while you work:
+Quit Firefox to regain control of the terminal, then run the following command:
 
 ```bash
 firefox &
 ```
 
-You'll notice that however Firefox is running in the background, it will show the process' output in your terminal. This is because the standard output and error of the process are still connected to the terminal.
+The ampersand (**`&`**) at the end of this command starts Firefox as a **background** process. Bash will print its PID, for example:
 
-You can now look up its PID by name using `pidof` (in a separate terminal):
+```
+[1] 3776
+```
+
+Background processes may continue to print messages to the terminal, but they don’t block you from running other commands. For example, while Firefox is running, press Enter to start a new prompt, and rerun this command from earlier:
+
+```bash
+ps -e | grep firefox
+```
+
+Finally, quit Firefox, then press Enter in the terminal. Bash will confirm the process has finished:
+
+```
+[1]+  Done                       firefox
+```
+
+::: info
+A single command may create multiple processes, such as when using pipes (`|`). For this reason, Bash uses **job numbers** (not PIDs) to track background jobs. In the example above, `[1]` was the job number.
+:::
+
+### Daemons
+
+Earlier in this lab, you used `ps` to list every process on the system:
+
+```bash
+ps -e
+```
+
+Most of these processes aren’t associated with a terminal — as indicated by the `?` in the TTY column — and don’t require user interaction. These processes are known as **daemons**.
+
+Daemons provide important system services. They are usually created during system startup and continue running until you stop them, or the system shuts down. 
+
+Daemons often have the suffix “d” in their name, such as `systemd` or `sshd`, but this is just a convention, not a requirement.
+
+## Process information
+
+Start Firefox, then use the **`pidof`** command to look up its PID:
 
 ```bash
 pidof firefox
 ```
 
-`pidof` returns the PID (or multiple PIDs if several instances are running) of a process by its name. You can then use that PID with `ps` to get more details about the process:
+This command may list multiple PIDs, indicating either that you’ve launched multiple instances of Firefox, or that Firefox itself spawned multiple processes. In the first case, look for the largest PID (the most recently launched instance); in the second case, the smallest (the process that was created first).
+
+If you don’t know the exact name of a process, use **`pgrep`** to perform a search. For example:
 
 ```bash
-ps -p $(pidof firefox)
+pgrep -u $USER -f snap
 ```
 
-TODO: hebben ze $(...) al gezien?
+This command searches for processes that belong to the current user (`-u $USER`) and have “snap” somewhere in their full command line (`-f`).
 
-This shows the same columns as `ps -ef`, but filtered to just the process you are interested in. The `$(...)` syntax runs `pidof firefox` first and passes its output as an argument to `ps`.
-
-If you want to search more broadly — for example when you do not know the exact process name — you can use `pgrep`:
+Once you have the PIDs of the processes you’re interested in, use `ps` and `top` to monitor them:
 
 ```bash
-pgrep -a fire
+ps $(pidof firefox)
+top -p $(pidof -d, firefox)
 ```
 
-The `-a` flag also prints the full command line, not just the PID. `pgrep` matches against the process name as a substring, so `fire` is enough to find Firefox.
+`ps` supports multiple PIDs as arguments. However, `top` requires that you provide them as a single comma-separated argument for the `-p` option. Fortunately, `pidof` can provide such an argument by adding the `-d` option and specifying a delimiter (`,`).
 
-## Inspecting /proc
+## Process hierarchy
 
-Every operating system keeps track of all processes running on the system in a process table. Linux exposes this information through a special virtual filesystem called `/proc`. This filesystem contains a directory for each active process, named after its PID. Inside each process directory, there are various files that provide information about the process, such as its status, memory usage, open file descriptors, and more.
+Linux organizes processes using parent-child relationships. Every process has a unique PID and stores the PID of the process that created it as the **Parent Process ID (PPID)**. The resulting hierarchy is known as the **process tree**.
 
-Check out the contents of the process directory for one of the Firefox processes you found earlier:
+The **`pstree`** command visualizes this process tree:
 
 ```bash
-ls /proc/<pid>
+pstree -T
 ```
 
-Each entry in that directory represents a property or resource of the process. The table below covers the most important ones:
+The `-T` option hides **threads**. Threads allow a process to perform multiple tasks in parallel, but they are out-of-scope for this course and clutter the output of `pstree`.
 
-| Entry     | Type      | Description                                                                                                        |
-| --------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
-| `cmdline` | file      | The full command used to start the process, with arguments separated by null bytes.                                |
-| `status`  | file      | Human-readable summary: name, PID, PPID, current state, and memory usage figures.                                  |
-| `stat`    | file      | Machine-readable version of the same data, used internally by tools such as `ps` and `top`.                        |
-| `environ` | file      | The environment variables the process was started with, separated by null bytes.                                   |
-| `exe`     | symlink   | Points to the executable binary that was launched.                                                                 |
-| `cwd`     | symlink   | Points to the process's current working directory.                                                                 |
-| `fd/`     | directory | Contains one symlink per open file descriptor (stdin, stdout, stderr, open files, sockets, …).                     |
-| `maps`    | file      | The virtual memory map: which address ranges are in use and what is mapped there (code, heap, stack, shared libs). |
-| `io`      | file      | I/O statistics: how many bytes the process has read from and written to storage since it started.                  |
-| `limits`  | file      | The resource limits in effect for the process (e.g. maximum number of open files, maximum stack size).             |
-| `task/`   | directory | Contains one subdirectory per thread. Each subdirectory has the same layout as the process directory itself.       |
+Add the `-p` option to show PIDs: 
 
 ```bash
-cat /proc/<pid>/status
+pstree -pT
 ```
 
-This shows the name, PID, PPID, current state, and memory usage of the process in a readable format. Which of these fields do you recognize from the output of `ps`?
+To view the ancestry of a single process, add the `-s` option and specify a PID. For example, leave the `top` command running in your terminal, then open an additional tab and run the following command to see the ancestry of `top`:
 
 ```bash
-cat /proc/<pid>/cmdline
+pstree -pT -s $(pidof top)
 ```
 
-This prints the exact command used to launch the process. Because arguments are separated by null bytes rather than spaces, pipe through `tr` to make it readable:
+In my case, the output of this command was:
+
+```
+systemd(1)
+└─ systemd(1482)
+   └─ ptyxis(2981)
+      └─ ptyxis-agent(2989)
+         └─ bash(3013)
+            └─ top(4300)
+```
+
+::: info
+The formatting of this output was adjusted for readability.
+:::
+
+This output shows that `top` was created by `bash`, the shell, which was created by `ptyxis`, the terminal application, which was created by `systemd`.
+
+**`systemd`** is the first process created by the kernel and manages system services. As the root of the process tree, it receives PID 1.
+
+`systemd` plays an important role during system startup. Here’s what happens when you power on your computer:
+
+1. The CPU starts executing instructions from a predefined memory location. These instructions, known as **firmware**, are stored on a small read-only memory chip on the computer’s motherboard. Modern systems use the **Unified Extensible Firmware Interface (UEFI)**; older systems use the **Basic Input/Output System (BIOS)**.
+2. The firmware initializes essential hardware and performs a **Power-On Self-Test (POST)** to verify that the hardware is functioning correctly.
+3. The firmware searches for a bootable device, loads a bootloader from that device into memory, and transfers control to it. Most Linux systems use the **Grand Unified Bootloader (GRUB)**.
+4. The bootloader searches the **/boot** directory for a compressed kernel image and unpacks it into memory. It then loads a temporary root filesystem: the **Initial RAM Filesystem (initramfs)**. This filesystem contains the minimal tools and drivers needed to mount the actual root filesystem, after which it is discarded.
+5. The bootloader transfers control to the kernel, which initializes the hardware and sets up the necessary data structures for managing processes, memory, and devices.
+6. The kernel starts the **init** system, which starts and manages all other system services. Most Linux systems use `systemd` as the init system.
+7. Finally, the init system starts a desktop environment or terminal, allowing a user to sign in and start using the system.
+
+## Signals
+
+Processes communicate with the operating system and with each other through **signals**. A signal is a software interrupt — a notification sent to a process to inform it that a specific event has occurred. Processes can register a **handler** to respond to a signal, or perform a default action. As a user, you’ll mostly use signals to stop a running process.
+
+The **SIGINT** (*keyboard interrupt*) signal is sent to the foreground process when the user presses **Ctrl+C** in the terminal. The default action for this signal is to terminate the process, but the process can choose to handle it, cancel its current task, and continue executing.
+
+In [Working with Text](working-with-text), you used `tail` to watch a log file for changes:
+
+[TODO: Update this example after completing the Working with Text lab]
 
 ```bash
-cat /proc/<pid>/cmdline
+tail -f log.txt
 ```
 
-## Stopping processes
+This process runs indefinitely, so you need a signal to stop it. Press **Ctrl+C** to send SIGINT.
 
-In Linux, processes communicate with each other and with the operating system through signals. A signal is a software interrupt — a notification sent to a process to inform it that a specific event has occurred. When a process receives a signal, it can respond in one of three ways:
+The **SIGTERM** (*graceful termination*) signal asks a process to terminate. This signal is stronger than SIGINT, which only asks a process to cancel its current task. The default action for SIGTERM is to terminate the process, but the process should handle it and perform any necessary cleanup first.
 
-1. **Default action**: Perform the built-in action for that signal (e.g. terminate, stop, or ignore).
-2. **Custom handler**: Execute a function the process registered for that signal, allowing it to clean up before exiting.
-3. **Ignore**: Discard the signal entirely.
-
-Signals are identified by both a name (e.g. `SIGTERM`) and a number (e.g. `15`). The most important ones are listed below:
-
-| Signal    | Number | Default action | Description                                                                                                                        |
-| --------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `SIGHUP`  | 1      | Terminate      | Sent when the controlling terminal is closed. Daemons often use it as a trigger to reload their configuration.                     |
-| `SIGINT`  | 2      | Terminate      | Sent when the user presses `Ctrl+C`. Asks the process to stop, but the process can catch and handle it.                            |
-| `SIGTERM` | 15     | Terminate      | The standard way to ask a process to stop. The process can catch the signal, perform cleanup, and then exit gracefully.            |
-| `SIGKILL` | 9      | Terminate      | Forces the kernel to destroy the process immediately. Cannot be caught, ignored, or blocked — there is no opportunity to clean up. |
-| `SIGSTOP` | 19     | Stop           | Pauses the process. Like `SIGKILL`, it cannot be caught or ignored.                                                                |
-| `SIGCONT` | 18     | Continue       | Resumes a process that was previously stopped with `SIGSTOP`.                                                                      |
-
-The `kill` command sends a signal to a process by its PID. Despite its name, it is not limited to terminating processes — it can send any signal. Without a signal specified, it sends `SIGTERM` (15) by default:
+Use the **`kill`** command to send a SIGTERM signal. For example, run the previous `tail` command again, then open an additional tab and run the following command:
 
 ```bash
-kill <pid>         # sends SIGTERM
-kill -9 <pid>      # sends SIGKILL
-kill -SIGSTOP <pid>  # sends SIGSTOP — pauses the process
-kill -SIGCONT <pid>  # sends SIGCONT — resumes it
+kill $(pidof tail)
 ```
 
-Try to stop the Firefox process you started earlier using `kill`:
+The `kill` command can send any signal by specifying its name as an argument. For example, here’s how you send SIGINT instead of the default SIGTERM:
 
 ```bash
-kill $(pidof firefox)
+kill -INT $(pidof tail)
 ```
 
-### Graceful shutdown with SIGTERM
+Any well-behaved process should handle SIGTERM and perform a graceful shutdown. However, a process may become stuck and unable to respond to signals. In that case, you can send the **SIGKILL** (*forced termination*) signal. This signal is handled by the kernel and forces the process to exit.
 
-Start the simulation script in the background:
+Here’s how you send SIGKILL instead of SIGTERM:
 
 ```bash
-chmod u+x kill-signals.sh
-./kill-signals.sh &
+kill -KILL $(pidof tail)
 ```
 
-Note the PID printed by the shell, then send `SIGTERM` to it:
+The targeted process will not be able to handle this signal or perform any cleanup. Therefore, you should only use SIGKILL as a last resort and prefer SIGINT or SIGTERM whenever possible.
 
-```bash
-kill <pid>
-```
+## Up next
 
-`kill-signals.sh` catches `SIGTERM`, prints a message, and exits cleanly. You can observe the output in the terminal — the process has a chance to finish any work in progress before it stops.
+In this lab, you learned about processes and how to manage them. Practice these skills by solving the upcoming exercises.
 
-### Forced termination with SIGKILL
+When you’re done, proceed to the next lab, where you'll learn how to connect to a Linux system remotely.
 
-Start the script again and this time send `SIGKILL`:
-
-```bash
-./kill-signals.sh &
-kill -9 <pid>
-```
-
-The process is destroyed by the kernel immediately, with no opportunity to run a cleanup handler. You will not see the graceful-shutdown message this time.
-
-<details>
-  <summary>
-  When should we use <code>kill &lt;pid&gt;</code> versus <code>kill -9 &lt;pid&gt;</code>?
-  </summary>
-
-`kill <pid>` sends **SIGTERM** (15): the process receives the signal and can handle it — running cleanup code, flushing buffers, closing connections — before it exits. The process can also choose to ignore it entirely.
-
-`kill -9 <pid>` sends **SIGKILL** (9): the kernel destroys the process immediately, bypassing any signal handler. There is no cleanup, no graceful shutdown, no way for the process to refuse.
-
-Always try `kill <pid>` first. Well-written processes handle SIGTERM correctly and exit cleanly. Fall back to `kill -9 <pid>` only if the process does not respond — for example if it is frozen or stuck in an infinite loop ignoring signals. Be aware that a SIGKILL'd process may leave behind partial writes, open sockets, or lock files that need manual cleanup.
-</details>
