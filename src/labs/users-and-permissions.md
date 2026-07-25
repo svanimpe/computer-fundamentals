@@ -393,6 +393,8 @@ su -
 
 The dash starts a **login shell**, which also loads root's environment variables and navigates to root's home directory. Without the dash, you switch to root but keep your current environment.
 
+Use the `exit` command to return to your previous user.
+
 ::: info
 On many modern distributions, the root account has no password set and cannot be logged into directly. In that case, use `sudo -i` to start a root login shell instead.
 :::
@@ -427,8 +429,6 @@ sudo passwd -u alice
 
 ## Up next
 
-In this lab, you learned how Linux identifies users and groups and how it controls access to files and directories through permissions.
-
-Practice what you've learned by solving the upcoming exercises.
+In this lab, you learned how Linux identifies users and groups and how it controls access to files and directories through permissions. Practice what you've learned by solving the upcoming exercises.
 
 When you're done, proceed to the next lab, where you'll learn how the operating system runs applications.
