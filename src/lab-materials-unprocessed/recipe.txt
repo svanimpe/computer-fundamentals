@@ -1,0 +1,7 @@
+In this file, write down a recipe for one of your favorite foods.
+
+Look up a recipe online, copy and paste it here, then clean up the text.
+
+The result should be a neatly formatted recipe, containing a title, a list of ingredients, and a list of steps.
+
+When you're done, delete these instructions, and leave only the recipe.
