@@ -1,2 +1,0 @@
-# Exercises 9
-

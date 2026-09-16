@@ -6,17 +6,9 @@ export default withMermaid({
   description: "",
   srcDir: "src",
   themeConfig: {
+    logoLink: "/preface",
     sidebar: [
       { text: "Preface", link: "/preface"},
-      {
-        text: "Computer Systems",
-        items: [
-          { text: "Hardware", link: "/chapters/hardware" },
-          { text: "Software", link: "/chapters/software" },
-          { text: "Networks", link: "/chapters/networks" },
-          { text: "A Brief History of Computing", link: "/chapters/history" },
-        ]
-      },
       {
         text: "Linux",
         items: [
@@ -24,21 +16,18 @@ export default withMermaid({
           { text: "Exploring Ubuntu", link: "/labs/exploring-ubuntu" },
           { text: "👩‍💻 Exercises 1", link: "/exercises/exercises1" },
           { text: "Files and Directories", link: "/labs/files-and-directories" },
-          { text: "👩‍💻 Exercises 2", link: "/exercises/exercises2" },
           { text: "Working With Text", link: "/labs/working-with-text" },
-          { text: "👩‍💻 Exercises 3", link: "/exercises/exercises3" },
+          { text: "👩‍💻 Exercises 2", link: "/exercises/exercises2" },
           { text: "Using the Shell", link: "/labs/using-the-shell" },
-          { text: "👩‍💻 Exercises 4", link: "/exercises/exercises4" },
-          { text: "Users and Permissions", link: "/labs/users-and-permissions" },
-          { text: "👩‍💻 Exercises 5", link: "/exercises/exercises5" },
-          { text: "Process Management", link: "/labs/process-management" },
-          { text: "👩‍💻 Exercises 6", link: "/exercises/exercises6" },
-          { text: "File Systems", link: "/labs/file-systems" },
-          { text: "👩‍💻 Exercises 7", link: "/exercises/exercises7" },
+          { text: "👩‍💻 Exercises 3", link: "/exercises/exercises3" },
           { text: "Package Management", link: "/labs/package-management" },
-          { text: "👩‍💻 Exercises 8", link: "/exercises/exercises8" },
+          { text: "Users and Permissions", link: "/labs/users-and-permissions" },
+          { text: "👩‍💻 Exercises 4", link: "/exercises/exercises4" },
+          { text: "Process Management", link: "/labs/process-management" },
+          { text: "👩‍💻 Exercises 5", link: "/exercises/exercises5" },
+          { text: "File Systems", link: "/labs/file-systems" },
           { text: "Remote Login", link: "/labs/remote-login" },
-          { text: "👩‍💻 Exercises 9", link: "/exercises/exercises9" },
+          { text: "👩‍💻 Exercises 6", link: "/exercises/exercises6" },
         ]
       }
     ]
@@ -48,7 +37,7 @@ export default withMermaid({
       infoLabel: "Note",
       tipLabel: "Tip"
     }
-},
+  },
   mermaid: {
     
   }
