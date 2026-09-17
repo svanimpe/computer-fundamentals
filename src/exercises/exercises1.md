@@ -12,7 +12,7 @@ Open the Firefox web browser:
 
 ![Firefox](images/exercises1/firefox.png)
 
-Navigate to the page you're on now, [download the lab materials for this course](TODO), and save this file to your **Downloads** directory. Continue browsing the web, download a few more files, and bookmark some of your favorite sites.
+Navigate to the page you're on now, [download the lab materials for this course](../lab-materials.zip), and save this file to your **Downloads** directory. Continue browsing the web, download a few more files, and bookmark some of your favorite sites.
 
 Next, open Firefox settings. Configure your home screen and set your search engine to something other than Google, such as [DuckDuckGo](https://duckduckgo.com) or [Ecosia](https://www.ecosia.org).
 
