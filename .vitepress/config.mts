@@ -2,13 +2,14 @@ import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
 
 export default withMermaid({
+  base: "/computer-fundamentals/",
   title: "Computer Fundamentals",
   description: "",
+  ignoreDeadLinks: true,
   srcDir: "src",
   themeConfig: {
-    logoLink: "/preface",
+    logoLink: "/index",
     sidebar: [
-      { text: "Preface", link: "/preface"},
       {
         text: "Linux",
         items: [
