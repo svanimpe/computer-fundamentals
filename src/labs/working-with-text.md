@@ -39,7 +39,7 @@ cat -n hello_final.py
 ```
 
 ::: info
-The **`nl`** (*number lines*) command provides more control over line numbering. You’ll learn about this command in [Exercise ??]().
+The **`nl`** (*number lines*) command provides more control over line numbering. You’ll learn about this command in [Exercise 2.4](../exercises/exercises2#nl).
 :::
 
 ### Viewing large files
@@ -197,9 +197,9 @@ tr 'a-z' 'A-Z' < fruits.txt
 
 This redirect attaches the input of `tr` to **fruits.txt** instead of the terminal. 
 
-`tr` has many more features for you to explore. You’ll learn about them in the exercises.
+`tr` has many more features for you to explore. You’ll learn about them in [Exercise 2.6](../exercises/exercises2#tr).
 
-### Sorting lines
+### Sorting lines {#sort}
 
 The **`sort`** command sorts the lines of a file in ascending alphabetical order. Run the following command to try it out:
 
@@ -311,7 +311,7 @@ sort -t ';' -k2,2 -k3nr grades.csv
 
 The key `-k2,2` starts at the second field, and stops at the second field. Thus, it only sorts by group. This leaves the second key as a tie breaker to sort by grade within each group.
 
-### Extracting fields
+### Extracting fields {#cut}
 
 Once you’re familiar with `sort`, the other commands that operate on structured text are easy to learn. For example, the **`cut`** command extracts fields from a structured file.
 
