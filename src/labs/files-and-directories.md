@@ -393,6 +393,12 @@ Now that this file has been copied to its proper location, you can safely remove
 rm hello.py
 ```
 
+Also remove the copy you created earlier:
+
+```bash
+rm text/example.py
+```
+
 The **`rm`** (*remove*) command has similar options as `cp`. You can add `-v` for verbose output, and `-i` for interactivity.
 
 For the remaining files, you’ll take a different approach. What you’ve done so far — copying a file before removing the original — was safe but tedious. From now on, you’ll *move* files into their proper directories without creating additional copies.
