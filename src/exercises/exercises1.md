@@ -26,7 +26,7 @@ Open the Files app:
 
 Familiarize yourself with this app as you explore your home directory. Verify that your **Downloads** directory contains the files you downloaded in the previous exercise.
 
-## Exercise 1.3
+## Exercise 1.3 {#appcenter}
 
 Open App Center:
 

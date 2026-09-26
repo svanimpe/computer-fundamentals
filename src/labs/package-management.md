@@ -1,183 +1,255 @@
 # Package Management
 
-## Lab overview
-
-In this lab assignment, you will learn:
-
-- Where software can live on your Linux-system
-- Basic concepts of package managers
-- How to install software using a package manager
-
-## Software
-
-### Binaries and executables
-
-Within Linux-systems, we often refer to programs that we can run as **binaries**. Every program you use on these systems uses a specifc binary - code that allows our operating system to perform the necessary tasks.
-
-Linux distributions (such as our Ubuntu) come pre-installed with a decent amount of binaries. However, just like on your own computer, you sometimes wish to use software that you still need to install. You can do this manually yourself, or preferably you use a system that is made for managing software.
-
-All binaries on the system live in specific places, and your system knows where to look for them. Whenever you type a command in your terminal, your system looks in a few specific places for the binary that matches the command you want to use. 
-
-You can take a look at the PATH global variable to see where your system looks for software:
-
-```bash
-systemuser@localhost:~$ echo $PATH
-```
-
-If it doesn't find a matching binary or command on any of the locations in the PATH variable, your system will report the software is not installed or can't be found.
-
-### Manually downloading software
-
-Let's install software manually, to see what would be involved. For this test, we could use any software, but we will use [Dust](https://github.com/bootandy/dust) - a small tool for visualising disk usage. Feel free to check out the source code on GitHub!
-
-In order to install this software, we do the following:
-
-- Download the source code in an archived format
-- Unzip the files
-- Place our binary/executable in one of the locations on our system PATH
-- Test out the software in our terminal
-
-On your Ubuntu system, we will start by downloading the source code using `wget`:
-
-```bash
-systemuser@localhost:~$ wget https://github.com/bootandy/dust/releases/download/v1.2.5/dust-v1.2.5-x86_64-unknown-linux-gnu.tar.gz
-```
-
-::: info
-When installing manually, you have to check that the source code is built for the CPU-architecture for your chipset. If you use a different instruction set, you will have to look for the correct source code for your system.
+::: warning
+This lab is still in draft. It contains all the information you need, but the text isn't polished yet.
 :::
 
-After downloading, you can unzip the source code using the `tar` command with the correct options:
+In this lab, you'll learn how to use a **package manager** to install and manage the software on your system.
+
+## Binaries and packages
+
+When you compile the source code for a program, the compiler outputs an executable file known as a **binary**. This binary is then bundled with the assets, libraries, configuration files, and documentation for the program into a **package**.
+
+Linux distributions include a vast selection of packages, and a **package manager** to add, upgrade, or remove these packages.
+
+A package manager knows where to install the contents of a package, tracks which file belongs to which package, and understands the dependencies between packages.
+
+You'll start this lab by installing a package without the help of a package manager. This experience will help you understand and appreciate what a package manager does.
+
+## Installing software manually
+
+As an example, you'll install [Dust](https://github.com/bootandy/dust), a small tool for visualizing disk usage, similar to `du`.
+
+Start by navigating to your **Downloads** directory:
 
 ```bash
-systemuser@localhost:~$ tar -xzf dust-v1.2.5-x86_64-unknown-linux-gnu.tar.gz
+cd ~/Downloads
 ```
 
-When looking inside this directory, you should see the following:
+Dust publishes its releases on [GitHub](https://github.com/bootandy/dust/releases). Some of these are premade Ubuntu packages, but most are compressed archives for various platforms (including Windows and macOS).
+
+For this example, you'll use a **tarball**, which is an old archiving and compression format for Linux. It combines the **`tar`** (*tape archive*) and **`gzip`** formats into a single file with the **.tar.gz** extension.
+
+You'll use **`wget`** to download the file you need straight from the command line.
+
+If your computer uses the Intel/AMD 64-bit architecture (**x86_64**), run the following command:
 
 ```bash
-systemuser@localhost:~$ tree dust-v1.2.5-x86_64-unknown-linux-gnu
-
-dust-v1.2.5-x86_64-unknown-linux-gnu
-├── dust
-├── LICENSE
-└── README.md
+wget https://github.com/bootandy/dust/releases/download/v1.2.6/dust-v1.2.6-x86_64-unknown-linux-gnu.tar.gz
 ```
 
-`dust` here is our executable! Check if the correct permissions are present using `ls -l`:
+For the ARM 64-bit architecture (**AArch64**), use the following command instead:
+
+```bash
+wget https://github.com/bootandy/dust/releases/download/v1.2.6/dust-v1.2.6-aarch64-unknown-linux-gnu.tar.gz
+```
+
+Next, extract the contents of the tarball:
+
+```bash
+tar -xzf dust-v1.2.6-*-unknown-linux-gnu.tar.gz
+```
+
+This command tells `tar` to read the file (`-f`) you specified as an argument, unzip it (`-z`), and extract (`-x`) its contents.
+
+::: info
+I used globbing so the command will work on any machine, regardless of its architecture. However, you can just press `Tab` after typing `dust` and Bash will autocomplete the rest of the filename for you.
+:::
+
+The archive contained a directory named **dust-v1.2.6-x86_64-unknown-linux-gnu** or **dust-v1.2.6-aarch64-unknown-linux-gnu**. Inspect the contents of this directory:
+
+```bash
+ls dust-v1.2.6-*-unknown-linux-gnu
+```
+
+You'll see three files, one of which is a binary executable named **dust**. Run this binary to try it out:
+
+```bash
+./dust-v1.2.6-*-unknown-linux-gnu/dust
+```
+
+`dust` will show the contents of the current directory and how much space they take up.
+
+To install `dust`, you need to move the executable to a location where Bash knows to look for it. The `PATH` environment variable lists these locations:
+
+```bash
+echo $PATH
+```
+
+Whenever you type a command, Bash goes through the directories on your `PATH`, from left to right, until it finds a match. If it doesn't, it will report this as an error. That's why earlier, you specified the *path* to the executable (not just its name) so Bash knows where to find it:
+
+```bash
+./dust-v1.2.6-*-unknown-linux-gnu/dust
+```
+
+To install `dust`, copy or move its executable to **/usr/local/bin**, which is the appropriate home for it:
+
+```bash
+cp dust-v1.2.6-*-unknown-linux-gnu/dust /usr/local/bin
+```
+
+This command will fail because, as a regular user, you're not allowed to modify files outside of your home directory. Rerun the previous command with **`sudo`** to elevate your permissions to that of a system administrator:
+
+```bash
+sudo cp dust-v1.2.6-*-unknown-linux-gnu/dust /usr/local/bin
+```
+
+Alternatively, use the double exclamation point (`!!`) to recall the previous command from your history, and add `sudo` in front:
+
+```bash
+sudo !!
+```
+
+You'll find this quite useful, as it's common to forget `sudo` when you need it.
+
+::: info
+You'll learn more about `sudo` in the next lab, [Users and Permissions](users-and-permissions).
+:::
+
+Now that `dust` is installed, you can run it from anywhere on your system:
 
 ````bash
-systemuser@localhost:~$ ls -l dust-v1.2.5-x86_64-unknown-linux-gnu
+dust
 ````
 
-If the execute permissions are not present, you can add them using the `chmod command`
-
-Finally, we need to move this binary to one of the locations on our PATH. For our use case, we can do the following:
-
-````bash
-systemuser@localhost:~$ sudo cp dust-v1.2.5-x86_64-unknown-linux-gnu/dust /usr/local/bin/
-````
-
-Note that we use a copy here. This is simply to still have our files in our home folder. You could simply use `mv` as well. Additionally, you will need to use `sudo` to have enough permissions for this operation.
-
-After all that, you should be able to use the command `dust` on your system:
-
-````bash
-systemuser@localhost:~$ dust
-````
-
-This command will now work, and show you a basic overview of the disk usage of your current directory!
-
-## Package managers
-
-You can already tell that installing and using software like this is not ideal.Instead of 'manually' downloading software and managing everything yourself, you will want to use an organised system for this. This is where the concept of a package manager comes in handy - the package manager enables you to easily install, update or remove software from your system.
-
-### APT
-
-APT is the most commonly used package manager on Ubuntu systems, and is the one you use by default. In order to install using APT, we can use the following simple command structure:
+Try it out, then uninstall `dust` by removing its executable from **/usr/local/bin**:
 
 ```bash
-systemuser@localhost:~$ sudo apt install NAME_PACKAGE
+sudo rm /usr/local/bin/dust
 ```
 
-It is required to use sudo for installation with apt. A normal system user does not have permissions to install system-wide software.
+In the next section, you'll reinstall `dust` using a package manager.
 
-Let's give it a go with actual software, and install our first package with APT - `figlet` :
+## Using a package manager
 
-```bash
-systemuser@localhost:~$ sudo apt install figlet
-```
+If the previous section felt like a lot of work, that's because it was. In most cases, a manual installation process is even more complicated: packages can include many more files that need to go into specific directories, and can depend on other packages that should be installed first. Fortunately, a package manager handles all of this for you.
 
-When using `sudo`, we will be prompted for our password. Don't forget that while typing this, you will not get feedback, as this is a security measure. Additionally, you have to confirm your software installation when using `apt install` by typing `y` and pressing `ENTER` in our terminal, as shown.
+Ubuntu is based on [Debian](https://www.debian.org) and uses the Debian package format (**.deb**), the Debian Package tool (**`dpkg`**), and the Advanced Package Tool (**`apt`**). The latter is what you'll use for most package management tasks.
 
-After installation, we can use the `figlet` command, as APT has installed the binary and made it available on our system for use with our terminal. Give the following command a go:
+Before you do anything with `apt`, update your local package database so `apt` is aware of the latest available versions of each package:
 
 ```bash
-systemuser@localhost:~$ figlet Hello World!
-```
-
-#### Add a repository to APT
-
-Using APT is very straightforward, but not every single software that exists is available by default. Sometimes, you might want to add a different APT **repository**. You could view an APT repository as a place where software lives, bundled with metadata so that APT can install it properly. In reality, it is a bit more complex than that.
-
-For example: when you want to install the latest version of `Docker` on your Ubuntu-system, it is nót sufficient to use the `apt install`  command. In order to use APT to install Docker, you need to add the repository first. Usually, you can find this information online, but for Docker the commands you need to use would look like this:
-
-```bash
-# Add Docker's official GPG key:
-sudo apt update
-sudo apt install ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-# Add the repository to Apt sources:
-sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
-Types: deb
-URIs: https://download.docker.com/linux/ubuntu
-Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-EOF
-
 sudo apt update
 ```
 
+Next, search for the package you want to install:
+
+```bash
+apt search dust
+```
+
 ::: info
-Adding the Docker repository is not part of our course that you need to master, but this gives a good indication of what would be involved. You do not need to understand all of the commands above.
+Searching doesn't modify your system so it doesn't require elevated permissions (`sudo`).
 :::
 
-### Snap
+Scroll through the list. You'll find `dust` as `du-dust`.
 
-Another option on Ubuntu is Snap - a different package manager. Let's try to use Snap to install a different piece of software.
-
-In order to install using Snap, we can use the following command:
-
+Install `dust` with the following command:
 
 ```bash
-systemuser@localhost:~$ sudo snap install --classic code
+sudo apt install du-dust
 ```
 
-After some installing, you will now have installed Visual Studio Code on your system using the snap package manager! 
+This one command is all you need. `apt` will find the correct package for your architecture, check for and install any dependencies, and extract the contents of the package to the appropriate directories.
 
-### Flatpak
-
-A final package manager we want to introduce to you is Flatpak. SInce Flatpak is not natively installed, we will first install it using the APT package manager:
+`dpkg` can list the files that were installed as part of this package:
 
 ```bash
-systemuser@localhost:~$ sudo apt install flatpak
+dpkg -L du-dust
 ```
 
-In order to then use Flatpak to install software, we use the following command:
+Among the files you should recognize are the executable **/usr/bin/dust** and the man page **/usr/share/man/man1/dust.1.gz**.
+
+All of these files will be removed when you uninstall the package:
 
 ```bash
-systemuser@localhost:~$ sudo flatpak install NAME_PACKAGE
+sudo apt remove du-dust
 ```
 
-Packages you install using Flatpak have to be run using the following command:
+For more information about `apt`, consult its man page. You'll find that `apt` has many more useful subcommands, such as `show`, `list`, `upgrade`, and `remove`.
+
+## Self-contained packages
+
+Traditional package managers such as `apt` are deeply integrated with the system and offer the best possible performance. However, this performance comes with some drawbacks. For example, packages often have conflicting dependencies, requiring different versions of the same library. Also, any package you install has full access to all of your files and directories, which is a potential security risk. For these reasons, newer package managers use **self-contained** packages, similar to how applications work on mobile platforms with app stores.
+
+Self-contained packages require additional memory and storage, making them much less efficient than traditional packages, but they do offer some benefits. A self-contained package can include all of its dependencies, making it compatible with many more operating systems and versions. A self-contained package is also **sandboxed**, meaning it's isolated from the rest of the system. Sandboxed applications have a limited set of permissions that have to be requested by the developer and granted by the user. Without these permissions, the application cannot open any files, use the network, or access any devices. 
+
+Ubuntu uses **`snap`** for self-contained packages, whereas most other distributions use **`flatpak`**. In the following sections, you'll use `snap` to install **GIMP**, and `flatpak` to install **Inkscape**. GIMP and Inkscape are popular open source alternatives to Adobe Photoshop and Illustrator.
+
+### Installing a package with snap
+
+`snap` powers the **App Center** that you used in [Exercise 1.3](../exercises/exercises1#appcenter). You can use this application to browse the [Snap Store](https://snapcraft.io/store) and install or remove packages, but in this lab, you'll use the command line instead.
+
+Search for “gimp” to find the package you want to install:
 
 ```bash
-systemuser@localhost:~$ flatpak run NAME_PACKAGE
+snap search gimp
 ```
 
-This works similar to the APT and Snap package manager, but Flatpak offers a lot of different packages and usage options. Most of these advanced use cases are beyond the scope of this course, however.
+Install this package as follows:
+
+```bash
+sudo snap install gimp
+```
+
+Once GIMP is installed, you can click its icon in the Applications Overview, or run it from the command line:
+
+```bash
+gimp
+```
+
+For more information about `snap`, consult its man page and look up the subcommands `info`, `list`, `refresh`, and `remove`.
+
+### Installing a package with flatpak
+
+Ubuntu doesn't include `flatpak` out of the box, but you can install it using `apt`:
+
+```bash
+sudo apt install flatpak
+```
+
+Unlike `snap`, which is tied to the [Snap Store](https://snapcraft.io/store), `flatpak` is decentralized and lets you download packages from any store. You first have to register one or more stores before you can start using it.
+
+Use the following command to register [Flathub](https://flathub.org/en), a popular store for `flatpak` packages:
+
+```bash
+flatpak remote-add flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+```
+
+Restart your system (or sign out and back in) for this change to take effect, then confirm that Flathub has been registered:
+
+```bash
+flatpak remotes
+```
+
+You can now search for “inkscape” to find the package you want to install:
+
+```bash
+flatpak search inkscape
+```
+
+Find the correct **Application ID** and use this ID to install the package:
+
+```bash
+flatpak install org.inkscape.Inkscape
+```
+
+This will install Inkscape and any dependencies it requires.
+
+::: info
+`flatpak` is designed to not require `sudo`. Instead, it will prompt you for your password whenever it needs additional permissions.
+:::
+
+Once Inkscape is installed, you can click its icon in the Applications Overview, or run it from the command line:
+
+```bash
+flatpak run org.inkscape.Inkscape
+```
+
+As you can see, this is very different from how you run `snap` packages. `snap` installs binaries in **/snap/bin**, which is listed in the `PATH` variable, whereas `flatpak` applications are more heavily sandboxed and invoked through `flatpak` itself.
+
+For more information about `flatpak`, consult its man page and look up the subcommands `info`, `list`, `update`, and `uninstall`.
+
+## Up next
+
+This lab briefly touched on permissions when discussing `sudo`. In the next lab, you'll learn how Linux handles users, groups, and permissions.
