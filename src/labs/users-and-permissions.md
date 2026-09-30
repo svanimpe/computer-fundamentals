@@ -1,5 +1,9 @@
 # Users and Permissions
 
+::: warning
+This lab is still in draft. It contains all the information you need, but the text isn't polished yet.
+:::
+
 In this lab, you'll learn how Linux manages users and controls access to files and directories.
 
 You'll learn where user and group information is stored, how to read and change permissions, and how to work with elevated privileges.
@@ -33,6 +37,10 @@ You can also look up another user's UID and groups by passing their username as 
 ```bash
 id root
 ```
+
+Every Linux system has this special user named **root**, also known as the **superuser**, which has a UID of 0. The root user can modify any file on the system, regardless of its permissions.
+
+Because root is so powerful, any mistake made as root can damage or compromise the entire system. For this reason, it's best practice to avoid logging in directly as root, which is why we use `sudo` instead to temporarily elevate our privileges to those of root.
 
 ### /etc/passwd
 
@@ -71,20 +79,26 @@ Passwords are stored in **/etc/shadow**, not in **/etc/passwd**. The reason is s
 **/etc/shadow** is protected: only the root user can read it. Verify this:
 
 ```bash
-ls -l /etc/shadow
+cat /etc/shadow
+```
+
+Try again with `sudo` to elevate your permissions:
+
+```bash
+sudo cat /etc/shadow
 ```
 
 Each line in **/etc/shadow** corresponds to a user account in **/etc/passwd** and stores the hashed password alongside information such as when the password was last changed and when it expires.
 
 ::: info
-A **hash function** transforms a password into a fixed-length string that cannot be reversed. When you log in, the system hashes the password you entered and compares the result to the stored hash. If they match, you're authenticated without the system ever needing to store your actual password.
+A **hash function** transforms a password into a fixed-length string through a non-reversible process. When you log in, the system hashes the password you entered and compares the result to the stored hash. This way, the system can authenticate you without ever needing to store your password.
 :::
 
 ## Groups
 
 A **group** is a collection of user accounts. Groups make it practical to share access to resources: instead of managing permissions for each user individually, you add users to a group and assign permissions to that group.
 
-Every user belongs to at least one group: their **primary group**. This is the group assigned to files they create. Users can also belong to additional **secondary groups**, which grant access to resources shared by those groups.
+Every user belongs to at least one group: their **primary group**. This group usually has the same name as its user and is automatically assigned to all files created by this user. Users can also belong to **secondary groups**, which grant access to resources shared by those groups.
 
 Group information is stored in **/etc/group**. Take a look at its contents:
 
@@ -92,18 +106,18 @@ Group information is stored in **/etc/group**. Take a look at its contents:
 cat /etc/group
 ```
 
-Each line represents one group, with fields separated by colons:
+Each line represents one group, with fields separated by colons. For example:
 
 ```
-developers:x:1001:steven,alice
+sudo:x:27:steven
 ```
 
 | Field                | Example            | Description                                                         |
 | -------------------- | ------------------ | ------------------------------------------------------------------- |
-| Group name           | `developers`       | The name of the group.                                              |
+| Group name           | `sudo`       | The name of the group.                                              |
 | Password placeholder | `x`                | Groups can have passwords, but this is rarely used.                 |
-| GID                  | `1001`             | The group ID.                                                       |
-| Members              | `steven,alexander` | A comma-separated list of users for whom this is a secondary group. |
+| GID                  | `27`             | The group ID.                                                       |
+| Members              | `steven` | A comma-separated list of users for whom this is a secondary group. |
 
 ::: info
 Primary group membership is recorded in **/etc/passwd** (the GID field), not in **/etc/group**. The **/etc/group** file only lists secondary memberships.
@@ -121,43 +135,81 @@ You can also check the groups of another user by passing their username:
 groups root
 ```
 
-## File permissions
+## Changing passwords
 
-Every file and directory on a Linux system has a set of **permissions** that control who can read it, modify it, or execute it. These permissions are divided into three categories:
+Use the **`passwd`** command to change your password:
+
+```bash
+passwd
+```
+
+You will be prompted for your current password, then asked to enter and confirm the new one.
+
+As root, you can change the password of any user. To try this out, first create a new user named alice:
+
+```bash
+sudo useradd -m alice
+```
+
+Now set an initial password for Alice:
+
+```bash
+sudo passwd alice
+```
+
+You can set this password to expire immediately after Alice signs in. She will then be prompted to change her password:
+
+```bash
+sudo passwd --expire alice
+```
+
+You can also use `passwd` to lock a user account, for example, when a user leaves your organization:
+
+```bash
+sudo passwd -l alice
+```
+
+A locked account cannot be logged into, even when a user knows the password. To unlock the account, use the `-u` option:
+
+```bash
+sudo passwd -u alice
+```
+
+## Permissions
+
+Every file and directory has a set of **permissions** that control who can read, modify, or execute it. These permissions are divided into three categories:
 
 | Category | Symbol | Description                   |
 | -------- | ------ | ----------------------------- |
-| Owner    | `u`    | The user that owns the file.  |
-| Group    | `g`    | The group that owns the file. |
-| Others   | `o`    | Everyone else.                |
+| Owner (*user*)    | `u`    | Permissions for the user that owns the file.  |
+| Group    | `g`    | Permissions for the group that owns the file. |
+| Others   | `o`    | Permissions for everyone else.                |
 
-Each category has three permission bits:
+Each of these categories has three permission bits. The meaning of each bit depends on whether it's set on a file or on a directory:
 
-| Permission | Symbol | On files                       | On directories                                        |
+| Permission | Symbol | On a file                       | On a directory                                        |
 | ---------- | ------ | ------------------------------ | ----------------------------------------------------- |
 | Read       | `r`    | View the contents of the file. | List the contents of the directory.                   |
-| Write      | `w`    | Modify or delete the file.     | Create, rename, or delete files inside the directory. |
+| Write      | `w`    | Modify the file.     | Create, rename, or delete files inside the directory. |
 | Execute    | `x`    | Run the file as a program.     | Enter the directory and access its contents.          |
 
-::: info
-The execute permission on a directory is easy to overlook but crucial. Without it, you cannot `cd` into the directory and you cannot open, read, or write any of its files — even if you have read permission. Read permission alone only lets you see the names of the files inside; execute permission is what lets you actually reach them.
-:::
+Directory permissions can take some getting used to. For example, you cannot `cd` into a directory without execute permission on that directory, even if you have permission to read the directory. Also, you cannot remove a file from a directory without write permission on the *directory*, even if you have write permission on the *file*.
 
-### Reading permissions
+### Viewing permissions
 
-Use `ls -l` to display the permissions of files and directories:
+Use `ls -l` to view the permissions of files and directories:
 
 ```bash
 ls -l
 ```
 
-Each line starts with a string of ten characters, e.g.:
+Each line of output starts with a string of ten characters. For example:
 
 ```
 -rwxr-xr--
 ```
 
-The first character indicates the **file type**:
+The first of these characters indicates the **file type**:
 
 | Character | File type     |
 | --------- | ------------- |
@@ -165,7 +217,7 @@ The first character indicates the **file type**:
 | `d`       | Directory     |
 | `l`       | Symbolic link |
 
-The remaining nine characters are three groups of three, representing the permissions for the owner, group, and others respectively:
+The remaining nine characters form three groups of three, representing the permissions for the owner, group, and others respectively:
 
 ```
 rwx  r-x  r--
@@ -174,11 +226,11 @@ rwx  r-x  r--
  └── Owner: read, write, and execute
 ```
 
-A letter means the permission is granted; a dash (`-`) means it is not.
+Each letter indicates that permission is granted; a dash (`-`) means it's not.
 
 ### Octal notation
 
-Permissions can also be expressed as a three-digit octal number. Each digit corresponds to one category (owner, group, others), and its value is the sum of the granted permissions:
+Permissions can also be expressed as three-digit octal numbers, with one digit per category (owner, group, and others), ranging from 0 to 7. The value of each digit is the sum of the granted permissions for that category:
 
 | Permission | Value |
 | ---------- | ----- |
@@ -186,38 +238,36 @@ Permissions can also be expressed as a three-digit octal number. Each digit corr
 | Write      | 2     |
 | Execute    | 1     |
 
-For example, `rwxr-xr--` translates to:
+For example, the permissions `rwxr-xr--` correspond with:
 
 - Owner: `r` + `w` + `x` = 4 + 2 + 1 = **7**
-- Group: `r` + `-` + `x` = 4 + 0 + 1 = **5**
-- Others: `r` + `-` + `-` = 4 + 0 + 0 = **4**
+- Group: `r` + `x` = 4 + 1 = **5**
+- Others: `r` = **4**
 
-The octal representation of `rwxr-xr--` is therefore **754**.
+The octal representation of `rwxr-xr--` is therefore **754**. You can use this octal representation as a shorthand to set all permission bits at once.
 
-## Changing permissions
+### Changing permissions
 
-### chmod
-
-Use the **`chmod`** (*change mode*) command to change the permissions of a file or directory.
-
-With octal notation, you specify the exact permissions you want:
+Use the **`chmod`** (*change mode*) command to change the permissions of a file or directory. To try this out, first create a few new files:
 
 ```bash
-chmod 644 report.txt
+touch script.sh report.txt secret
 ```
 
-This sets the permissions of **report.txt** to `rw-r--r--`: read and write for the owner, read-only for the group and others.
+The **`touch`** command updates the modification time of a file, and as a side effect, also creates the file.
 
-With symbolic notation, you build up a change from three parts: **who**, **what**, and **which permissions**.
+Use `ls -l` to view the permissions of these files. By default, they should all be set to `rw-rw-r--`. You can use either **symbolic notation** or **octal notation** to change these permissions.
 
-The **who** part specifies which category to change:
+With symbolic notation, you build up a change from three parts: **who**, **what**, and **which**.
+
+The **who** part specifies the category to change:
 
 | Symbol | Category                     |
 | ------ | ---------------------------- |
 | `u`    | Owner (*user*)               |
 | `g`    | Group                        |
 | `o`    | Others                       |
-| `a`    | All three categories at once |
+| `a`    | All categories               |
 
 The **what** part specifies the operation:
 
@@ -227,208 +277,219 @@ The **what** part specifies the operation:
 | `-`    | Remove the permission.                              |
 | `=`    | Set exactly these permissions, removing any others. |
 
-For example:
+The **which** part specifies the permissions to change:
+
+| Symbol | Permission                                          |
+| ------ | --------------------------------------------------- |
+| `r`    | Read                                 |
+| `w`    | Write                              |
+| `x`    | Execute |
+
+You can specify multiple categories and permissions in a single change, and even specify multiple changes in a single command. For example:
 
 ```bash
 chmod u+x script.sh
+chmod ug+x script.sh
+chmod a+x script.sh
 chmod g-w report.txt
-chmod o= secret.txt
-chmod a+r public.html
+chmod g-rw report.txt
+chmod g=r,o= secret
 ```
 
-Here's what these commands do:
+Here's what these example do:
 
-1. Adds execute permission for the owner on **script.sh**.
-2. Removes write permission for the group on **report.txt**.
-3. Removes all permissions for others on **secret.txt**.
-4. Adds read permission for all three categories on **public.html**.
+1. Add execute permission for the owner on **script.sh**.
+2. Add execute permission for the owner and group on **script.sh**.
+3. Add execute permission for all categories on **script.sh**.
+4. Remove write permission for the group on **report.txt**.
+5. Remove read and write permissions for the group on **report.txt**.
+6. Set the group permissions to read-only and remove all permissions for other users on **secret**.
 
-You can combine multiple changes in a single command:
+With octal notation, you set all permission bits at once:
 
 ```bash
-chmod u+x,g-w script.sh
+chmod 644 report.txt
 ```
 
-To apply changes recursively across an entire directory tree, add the `-R` option:
+This sets the permissions of **report.txt** to `rw-r--r--`: read and write for the owner, read-only for the group and others.
+
+When you're done experimenting with `chmod`, clean up the files you created:
 
 ```bash
-chmod -R 755 project/
+rm script.sh report.txt secret
 ```
 
-### chown and chgrp
+### Changing owner and group
 
-Use the **`chown`** (*change owner*) command to change the owner of a file:
+As root, you can change the owner and group of a file. To try this out, suppose you want to prepare the lab materials for the new user you created earlier.
 
-```bash
-sudo chown alice report.txt
-```
-
-You can also set the group owner in the same command by adding a colon followed by the group name:
+Create a new directory for the lab materials in Alice's home directory:
 
 ```bash
-sudo chown alice:developers report.txt
-```
-
-To change only the group owner, use the **`chgrp`** (*change group*) command:
-
-```bash
-sudo chgrp developers report.txt
-```
-
-Both commands support the `-R` option for recursive changes:
-
-```bash
-sudo chown -R alice:developers project/
+sudo mkdir /home/alice/lab-materials
 ```
 
 ::: info
-Only the root user can change the owner of a file. A regular user can change the group owner of their own files, but only to a group they already belong to.
+You can now unzip and organize the lab materials into this directory, as you did in [Files and Directories](files-and-directories#materials). However, this step is optional because you don't actually need these files to complete this lab.
 :::
 
-## Default permissions
+Because you used `sudo`, the **lab-materials** directory is owned by root, not Alice:
 
-When you create a new file or directory, Linux assigns it a default set of permissions. The starting point for these defaults is:
-
-- **666** (`rw-rw-rw-`) for files, execute is never granted by default.
-- **777** (`rwxrwxrwx`) for directories.
-
-These starting permissions are then filtered by the **umask** before being applied. The umask specifies which permission bits to **remove**. Each bit set in the umask removes the corresponding permission from the default.
-
-For example, with a umask of **022** (`----w--w-`), the permissions for a new file are calculated as follows:
-
-```
-Base:  rw-rw-rw-  (666)
-Mask:  ----w--w-  (022)
-       ─────────
-Final: rw-r--r--  (644)
+```bash
+sudo ls -ld /home/alice/lab-materials
 ```
 
-And for a new directory:
+Use the **`chown`** (*change owner*) command to transfer ownership to Alice:
 
-```
-Base:  rwxrwxrwx  (777)
-Mask:  ----w--w-  (022)
-       ─────────
-Final: rwxr-xr-x  (755)
+```bash
+sudo chown -R alice /home/alice/lab-materials
 ```
 
-Use the **`umask`** command to display the current umask value:
+The `-R` option applies this change recursively to all of the files and subdirectories in **lab-materials**.
+
+Next, use the **`chgrp`** (*change group*) command to set the group to Alice's primary group, which is also named `alice`:
+
+```bash
+sudo chgrp -R alice /home/alice/lab-materials
+```
+
+Alternatively, you can use `chown` to change both the owner and the group:
+
+```bash
+sudo chown -R alice:alice /home/alice/lab-materials
+```
+
+Confirm these changes with `ls`:
+
+```bash
+sudo ls -ld /home/alice/lab-materials
+```
+
+### Default permissions
+
+When you create a new file or directory, Linux assigns it a default set of permissions based on the base set and the current **umask** (*user file-creation mask*).
+
+The base permissions are:
+
+- **666** (`rw-rw-rw-`) for files
+- **777** (`rwxrwxrwx`) for directories
+
+This enables all permissions, except for files, which aren't executable by default.
+
+The umask specifies the permissions to *remove* from the base set. Each bit in the umask that is set to 1 removes the corresponding permission from the base set.
+
+For example, a umask of **022** (`----w--w-`) removes write permissions for the group and other users. This results in default permissions of **755** (`rwxr-xr-x`) for directories:
+
+```
+Base:     rwxrwxrwx  (777)
+Mask:     ----w--w-  (022)
+          ─────────
+Default:  rwxr-xr-x  (755)
+```
+
+and **644** (`rw-r--r--`) for files:
+
+```
+Base:     rw-rw-rw-  (666)
+Mask:     ----w--w-  (022)
+          ─────────
+Default:  rw-r--r--  (644)
+```
+
+The **`umask`** command displays the current umask:
 
 ```bash
 umask
 ```
 
-Add the `-S` option to see the symbolic representation instead:
+You also use it to set the umask:
 
 ```bash
-umask -S
+umask 007
 ```
 
-To set a new umask for the current session:
+This value only applies to your current shell session. To make it permanent, add this `umask` command to your **.bashrc** file.
 
-```bash
-umask 027
-```
+## Switching users
 
-A umask of **027** (`----w-rwx`) removes write from the group and all permissions from others, giving new files `rw-r-----` (640) and new directories `rwxr-x---` (750).
-
-::: info
-A umask set in the terminal only applies to the current session. To make it permanent, add the `umask` command to your `.bashrc` file.
-:::
-
-## Elevated privileges
-
-### The root account
-
-Every Linux system has a special user account named **root**, also known as the **superuser**. The root account is not subject to permission checks: it can read, write, and execute any file on the system, regardless of the permissions set on it.
-
-Because root is so powerful, a mistake made as root can damage or compromise the entire system. For this reason, it is best practice to avoid logging in directly as root.
-
-### sudo
-
-The **`sudo`** (*superuser do*) command lets an authorized user run a single command with elevated privileges, typically as root:
-
-```bash
-sudo apt update
-```
-
-This approach is safer than logging in as root because you only gain elevated privileges for a single command, you authenticate with your own password rather than the root password, and every command run with `sudo` is logged.
-
-To run a command as a specific user other than root, use the `-u` option:
-
-```bash
-sudo -u alice cat /home/alice/notes.txt
-```
-
-### The sudo group
-
-Not every user is allowed to use `sudo`. Most Linux distributions configure a dedicated group whose members are authorized to use the `sudo` command:
-
-- **sudo** on Debian-based systems such as Ubuntu
-- **wheel** on Red Hat-based systems such as Fedora
-
-Check whether you belong to this group:
-
-```bash
-groups
-```
-
-Your username should appear next to `sudo` or `wheel` in the output.
-
-### su
-
-The **`su`** (*switch user*) command starts a new shell session as another user:
+The **`su`** (*switch user*) command starts a new shell session as a different user:
 
 ```bash
 su alice
 ```
 
-This prompts for Alice's password. After authenticating, you're running commands as Alice.
+This prompts for Alice's password. After authenticating, you're running commands as Alice. When you're done, use the `exit` command to return to your own shell.
 
-To switch to the root account, run `su` with a dash and no username:
+You can add a dash (`-`) to start a **login shell** instead:
 
 ```bash
-su -
+su - alice
 ```
 
-The dash starts a **login shell**, which also loads root's environment variables and navigates to root's home directory. Without the dash, you switch to root but keep your current environment.
+This will load a fresh environment for Alice, load her settings from **.bashrc**, and start in her home directory. Verify this with `pwd` and compare it to using `su` without the dash.
 
-Use the `exit` command to return to your previous user.
+If you don't specify a username, `su` will attempt to sign in as root:
+
+```bash
+su
+```
+
+However, this won't work because the root user doesn't have a password configured. Ubuntu, like many Linux distributions, doesn't allow signing in as `root`, which is why we use `sudo` instead.
+
+## Elevated privileges
+
+The **`sudo`** (*switch user and do* or *superuser do*) command lets an authorized user run a single command with elevated privileges, typically as root:
+
+```bash
+sudo apt update
+```
+
+This approach is safer than signing in as root because you only gain elevated privileges for a single command, you authenticate with your own password rather than the root password, and every `sudo` command is logged.
+
+Use the `-u` option to run a command as a user other than root:
+
+```bash
+sudo -u alice mkdir /home/alice/lab-materials
+```
+
+This is particularly useful when creating files or directories, as it avoids having to transfer ownership afterwards.
+
+Finally, you can also use `sudo` to start an interactive (`-i`) login shell, where you can run multiple commands as a different user:
+
+```bash
+sudo -u alice -i
+```
+
+This is similar to using `su`, but `sudo` does allow signing in as root:
+
+```bash
+sudo -i
+```
+
+This is slightly safer than `su` because it doesn't require a root password. However, it remains risky because, as root, every mistake you make can effect the entire system.
+
+### The sudo group
+
+Not every user is allowed to use `sudo`. Most Linux distributions configure a dedicated group whose members are authorized to use `sudo`. On Ubuntu, this group is named **sudo**. On some other systems, it's named **wheel**.
+
+Use the `groups` command to verify that you belong to this group:
+
+```bash
+groups
+```
+
+Or use `grep` to see everyone in the sudo group:
+
+```bash
+grep sudo /etc/group
+```
 
 ::: info
-On many modern distributions, the root account has no password set and cannot be logged into directly. In that case, use `sudo -i` to start a root login shell instead.
+In [Exercise 1.4](../exercises/exercises1#user), you used the desktop environment to create a new user account. The panel where you configured this user had an “Administrator” toggle. This toggle adds the user to the sudo group.
 :::
-
-## Passwords
-
-Use the **`passwd`** command to change your own password:
-
-```bash
-passwd
-```
-
-You will be prompted for your current password, then asked to enter and confirm the new one.
-
-As root, you can change the password of any user by specifying their username:
-
-```bash
-sudo passwd alice
-```
-
-You can also lock a user account to prevent login, for example when an employee leaves:
-
-```bash
-sudo passwd -l alice
-```
-
-A locked account cannot be logged into with a password, even if the user knows it. To unlock the account:
-
-```bash
-sudo passwd -u alice
-```
 
 ## Up next
 
-In this lab, you learned how Linux identifies users and groups and how it controls access to files and directories through permissions. Practice what you've learned by solving the upcoming exercises.
+In this lab, you learned how Linux organizes users and groups and how it controls access to files and directories through permissions. Practice what you've learned by solving the upcoming exercises.
 
 When you're done, proceed to the next lab, where you'll learn how the operating system runs applications.

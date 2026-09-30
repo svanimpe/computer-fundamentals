@@ -49,7 +49,7 @@ Perform the following tasks:
 - Adjust the size and position of the dock to your liking.
 - Turn off Automatic Screen Lock. You don't need this in a virtual machine.
 
-## Exercise 1.4
+## Exercise 1.4 {#user}
 
 Use the Settings app to add an additional user account. Use the Quick Settings panel to switch to this account, then back to yours. Remove the account when you're done.
 

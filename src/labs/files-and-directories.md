@@ -300,7 +300,7 @@ cd -
 
 Your current working directory then becomes the previous working directory, so you can repeat this command to switch back and forth between two directories.
 
-## Preparing the lab materials
+## Preparing the lab materials {#materials}
 
 So far, you’ve learned to navigate the file system and list the contents of a directory. In this section, you’ll learn commands to copy, move, and remove files and directories. You’ll practice these commands by preparing the materials for the remaining labs.
 
