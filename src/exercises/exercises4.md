@@ -1,36 +1,22 @@
 # Exercises 4
 
-## Exercise 5.1 {#users}
+::: warning
+These exercises are still in draft. The text isn't polished yet and new exercises may be added in the future.
+:::
 
-Use the `id` command to look up your own UID, primary GID, and group memberships. Then do the same for the `root` user. What differences do you notice?
+Some of these exercises require a user account named **bob**. Create this account now:
 
-Next, look up your entry in **/etc/passwd**. Identify each field and explain what it means.
+```bash
+sudo useradd -m bob
+```
 
-Finally, look up the entry for `root` and compare its home directory and login shell to your own.
+When you're done with the exercises, remove the account with the following command:
 
-## Exercise 5.2 {#shadow}
+```bash
+sudo userdel -r bob
+```
 
-Try to display the contents of **/etc/shadow** as a regular user. What happens and why?
-
-Now use `sudo` to display its contents. Find your own entry and identify the hashed password field.
-
-## Exercise 5.3 {#service-accounts}
-
-Browse **/etc/passwd** and find two service accounts. For each one, note the login shell and explain why that shell was chosen for a service account.
-
-## Exercise 5.4 {#groups}
-
-Use the `groups` command to list all groups you belong to. Then use `id` to verify the result.
-
-Look up each of your groups in **/etc/group**. For each group, note its GID and explain what purpose it likely serves based on its name.
-
-## Exercise 5.5 {#read-permissions}
-
-Navigate to **/etc** and run `ls -l`. Find one file where others have no permissions at all, one where the owner has different permissions from the group, and one where everyone has the same permissions.
-
-For each file, write out its permissions in both symbolic and octal notation.
-
-## Exercise 5.6 {#calculate}
+## Exercise 4.1
 
 Convert the following symbolic permissions to octal notation:
 
@@ -39,56 +25,285 @@ Convert the following symbolic permissions to octal notation:
 - `r--r--r--`
 - `rwxrwx---`
 
-Then convert the following octal values to symbolic notation:
+<details>
+<summary>Solution</summary>
+<pre>
+755
+600
+444
+770
+</pre>
+</details>
+
+Convert the following octal permissions to symbolic notation:
 
 - `644`
 - `700`
-- `755`
+- `754`
 - `640`
 
-## Exercise 5.7 {#chmod}
+<details>
+<summary>Solution</summary>
+<pre>
+rw-r--r--
+rwx------
+rwxr-xr--
+rw-r-----
+</pre>
+</details>
+
+## Exercise 4.2
+
+Set the umask to `002`.
+
+<details>
+<summary>Solution</summary>
+<pre>
+umask 002
+</pre>
+</details>
 
 Create a file named **permissions.txt** in your home directory.
 
-Perform the following changes, verifying the result with `ls -l` after each step:
+<details>
+<summary>Solution</summary>
+<pre>
+cd
+touch permissions.txt
+</pre>
+</details>
 
-1. Remove all permissions from the group and others using octal notation.
-2. Add read permission for the group using symbolic notation.
-3. Give the owner, group, and others exactly `r-x` permissions using octal notation.
-4. Add write permission for the owner and remove read permission for others using a single symbolic `chmod` command.
+What permissions do you expect this file to have?
 
-## Exercise 5.8 {#chown}
+<details>
+<summary>Answer</summary>
+<pre>
+rw-rw-r--
+</pre>
+</details>
 
-Create a file named **shared.txt** in your home directory.
+Verify this by viewing the permissions of this file.
 
-Use `sudo` to change the group owner to `root`. Verify the change with `ls -l`.
+<details>
+<summary>Solution</summary>
+<pre>
+ls -l permissions.txt
+</pre>
+</details>
 
-Next, use `sudo` to change both the owner and group back to your own user and group in a single `chown` command.
+Perform the following changes on **permissions.txt** and verify the result after each change.
 
-## Exercise 5.9 {#umask}
+Use octal notation to remove all permissions from the group and others.
 
-Check the current umask value and write it out in both octal and symbolic notation.
+<details>
+<summary>Expected result</summary>
+<pre>
+rw-------
+</pre>
+</details>
 
-Calculate what default permissions a new file and a new directory will receive with this umask. Verify your calculation by creating a file and a directory and inspecting their permissions.
+<details>
+<summary>Solution</summary>
+<pre>
+chmod 600 permissions.txt 
+</pre>
+</details>
 
-Now temporarily set the umask to `077` and create another file and directory. What permissions do they receive? Who can access them besides the owner?
+Use symbolic notation to add read permission for the group.
 
-## Exercise 5.10 {#permissions-scenario}
+<details>
+<summary>Expected result</summary>
+<pre>
+rw-r-----
+</pre>
+</details>
 
-Start by creating a second user named **bob** that you'll use in this exercise:
+<details>
+<summary>Solution</summary>
+<pre>
+chmod g+r permissions.txt
+</pre>
+</details>
 
-```bash
-sudo useradd -m bob
-```
+Use octal notation to give all categories the permissions `r--`.
 
-Set bob's password using `passwd`. After changing it, log in to verify it works.
+<details>
+<summary>Expected result</summary>
+<pre>
+r--r--r--
+</pre>
+</details>
 
-Next, use `sudo passwd -l` to lock bob's account, then try switching to it with `su`. What happens?
+<details>
+<summary>Solution</summary>
+<pre>
+chmod 444 permissions.txt
+</pre>
+</details>
 
-Unlock the account again and verify that login works as expected.
+Use symbolic notation to add write permission for the owner and remove read permission for others in a single command.
 
-Finally remove bob's account and home directory with:
+<details>
+<summary>Expected result</summary>
+<pre>
+rw-r-----
+</pre>
+</details>
 
-```bash
-sudo userdel -r bob
-```
+<details>
+<summary>Solution</summary>
+<pre>
+chmod u+w,o-r permissions.txt
+</pre>
+</details>
+
+Finally, remove the file **permissions.txt**.
+
+<details>
+<summary>Solution</summary>
+<pre>
+rm permissions.txt
+</pre>
+</details>
+
+## Exercise 4.3
+
+Give Bob a temporary password and configure his account so that he has to change his password when he first signs in.
+
+<details>
+<summary>Solution</summary>
+<pre>
+sudo passwd bob
+sudo passwd --expire bob
+</pre>
+</details>
+
+Sign in as Bob and set a password.
+
+<details>
+<summary>Solution</summary>
+<pre>
+su bob
+</pre>
+</details>
+
+Return to your own account.
+
+<details>
+<summary>Solution</summary>
+<pre>
+exit
+</pre>
+</details>
+
+## Exercise 4.4
+
+Copy the file **lab-materials.zip** from your **Downloads** directory into Bob's home directory.
+
+<details>
+<summary>Solution</summary>
+<pre>
+sudo cp ~/Downloads/lab-materials.zip /home/bob
+</pre>
+</details>
+
+Transfer ownership of this file to Bob's user account and primary group.
+
+<details>
+<summary>Solution</summary>
+<pre>
+sudo chown bob:bob /home/bob/lab-materials.zip
+</pre>
+</details>
+
+Can you combine the previous two steps in a single command? Explain your answer.
+
+<details>
+<summary>Answer</summary>
+<p>No. To perform this copy, you need access to your own home directory (to read the original file) as well as Bob's (to write the copy). Only root can do this.</p>
+<p>You can try to use <code>sudo -u bob</code> here but it won't work because Bob cannot access your <strong>Downloads</strong> directory.</p>
+</details>
+
+## Exercise 4.5
+
+Create an environment value named `MY_NAME` that holds your username.
+
+<details>
+<summary>Solution</summary>
+<pre>
+export MY_NAME=$USER
+</pre>
+</details>
+
+Sign in as Bob using a *non-login* shell.
+
+<details>
+<summary>Solution</summary>
+<pre>
+su bob
+</pre>
+</details>
+
+Print the value of `MY_NAME`.
+
+<details>
+<summary>Solution</summary>
+<pre>
+echo $MY_NAME
+</pre>
+</details>
+
+Return to your own account.
+
+<details>
+<summary>Solution</summary>
+<pre>
+exit
+</pre>
+</details>
+
+Sign in as Bob using a *login* shell.
+
+<details>
+<summary>Solution</summary>
+<pre>
+su - bob
+</pre>
+</details>
+
+Print the variable again. How would you explain what you see?
+
+<details>
+<summary>Answer</summary>
+<p>A non-login shell inherits the environment of the shell that created it, which is why the <code>MY_NAME</code> variable still exists.</p>
+<p>A login shell starts a fresh environment, so it doesn't inherit the <code>MY_NAME</code> variable.</p>
+</details>
+
+## Exercise 4.6
+
+Return to your own account, then lock Bob's account.
+
+<details>
+<summary>Solution</summary>
+<pre>
+sudo passwd -l bob
+</pre>
+</details>
+
+Try to sign in as Bob. What happens, and why do you think this is?
+
+<details>
+<summary>Answer</summary>
+<p>Even though Bob's account is locked and he cannot sign in, the shell still prompts you for a password.</p>
+<p>This is a security measure. Announcing that an account is locked would provide important information to an attacker, who can then direct their attention elsewhere. Therefore, the shell always prompts you for a password, even if your account is locked.</p>
+</details>
+
+Unlock Bob's account and verify it still works.
+
+<details>
+<summary>Solution</summary>
+<pre>
+sudo passwd -u bob
+su bob
+</pre>
+</details>
