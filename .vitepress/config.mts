@@ -26,7 +26,6 @@ export default withMermaid({
           { text: "👩‍💻 Exercises 4", link: "/exercises/exercises4" },
           { text: "Process Management", link: "/labs/process-management" },
           { text: "👩‍💻 Exercises 5", link: "/exercises/exercises5" },
-          { text: "File Systems", link: "/labs/file-systems" },
           { text: "Remote Login", link: "/labs/remote-login" },
           { text: "👩‍💻 Exercises 6", link: "/exercises/exercises6" },
         ]

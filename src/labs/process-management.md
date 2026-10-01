@@ -291,4 +291,4 @@ The targeted process will not be able to handle this signal or perform any clean
 
 In this lab, you learned about processes and how to manage them. Practice these skills by solving the upcoming exercises.
 
-When you’re done, proceed to the next lab, where you'll learn about file systems.
+When you’re done, proceed to the next lab, where you'll learn to connect to a Linux system remotely.
