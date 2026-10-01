@@ -200,7 +200,7 @@ However, this distinction is mostly historical and has lost much of its relevanc
 
 In these systems, **/bin** simply refers to **/usr/bin**.
 
-### Virtual file system
+### Virtual file system {#virtual-filesystem}
 
 If you’re familiar with Microsoft Windows, you may have noticed that Linux doesn’t use drive letters. Instead, Linux uses a **virtual file system**.
 
