@@ -35,6 +35,10 @@ Download Ubuntu Desktop 26.04 LTS from [https://ubuntu.com/download/desktop](htt
 
 ## Creating a virtual machine in VirtualBox
 
+::: info
+If you've installed UTM, you can skip this chapter and continue with [Installing Ubuntu](#installing-ubuntu)
+:::
+
 Download VirtualBox from [https://www.virtualbox.org/wiki/Downloads](https://www.virtualbox.org/wiki/Downloads) and install it.
 
 ::: info
@@ -72,6 +76,10 @@ Go to “Storage” and verify that the installation disc is inserted and that y
 Save your settings, then start the virtual machine.
 
 ## Creating a virtual machine in UTM
+
+::: info
+If you've installed VirtualBox, you can skip this chapter and continue with [Installing Ubuntu](#installing-ubuntu)
+:::
 
 Download UTM from [https://mac.getutm.app](https://mac.getutm.app) and install it into the **Applications** directory.
 
@@ -129,6 +137,10 @@ After signing in, click your way through the final setup screens, and you're rea
 
 ## Additional configuration for VirtualBox
 
+::: info
+This is only for users who installed their Virtual Machine with **Virtual Box**. If you use UTM, you can skip this chapter.
+::: 
+
 If you're using VirtualBox, I highly recommend that you install the Guest Additions in your virtual machine. These additions add support for drag and drop, shared folders, and a shared clipboard, and provide overall better performance.
 
 First, install some required software from the command line. Press the `Windows` or `Command` key, type “terminal” to search for the Terminal application, and open it.
@@ -151,6 +163,37 @@ Select “Devices” ▸ “Insert Guest Additions CD image...” from the menu 
 ![Guest Additions CD](images/setting-up-a-vm/vb_guest_additions.png)
 
 Click “Run Software” to install the Guest Additions and restart the virtual machine when you're done.
+
+## Troubleshooting
+
+::: info
+If you don't experience any issues, you can skip this chapter.
+:::
+
+You might run into some issues, or experience "a slow VM" when you're installing and/or using Ubuntu on your VirtualBox or UTM installation. Some key tips that might help:
+
+- Increase the RAM to 8192MB (8GB) and allocate 4 CPU cores, in the settings of your Virtual Machine
+- Disable any Virus scan applications on your host machine (Windows, MacOS)
+- Disable WSL if it is enabled. Running VirtualBox and WSL concurrently can degrade virtual machine performance due to Hyper-V virtualization overhead.
+
+### Known issues
+
+#### I can't install VirtualBox because the C++ runtime is missing
+
+- Open the `cmd` application on your Windows machine by pressing the `Windows` key and enter `cmd`
+- execute `winget install Oracle.VirtualBox`
+
+The winget application will install both the C++ runtime and VirtualBox for you.
+
+#### I experience a black screen or see an "unsupported hypervisor" error
+
+This is mostly a driver problem (in the virtual machine) related to the graphics card. Sometimes this problem is not an error, but merely a warning that disappears after a few minutes.
+
+If this message doesn't disappear after a few minutes, try altering the Graphics Controller (in the settings of your Virtual Machine) from `VMSVGA` to `VBoxSVA`.
+
+#### My Virtual Machine works, but the screen is very small
+
+Follow the steps from [Additional configuration for VirtualBox](#additional-configuration-for-virtualbox), so your virtual machine can match the resolution of your hosting device.
 
 ## Up next
 
