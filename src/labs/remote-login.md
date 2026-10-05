@@ -1,138 +1,147 @@
 # Remote Login
 
-## Lab overview
+::: warning
+This lab is still in draft. It contains all the information you need, but the text isn't polished yet.
+:::
 
-In this lab assignment, you will learn:
+In this lab, you'll learn how you can use **SSH** to connect to a Linux system remotely. You'll set up an SSH server on your virtual machine and connect to it from your host machine.
 
-- Brief introduction to **Secure Shell** (**SSH**)
-- Installing the **SSH-server** on a Linux machine
-- Connecting to a **remote machine** using **SSH**
-- **Practicing** basic remote login and its possibilities
+## About SSH
 
-## SSH
+**SSH** (*secure shell*) is a network protocol used for secure remote login. You can use SSH to open a shell on a remote machine, send commands to it, and copy files over.
 
-### A brief overview
+To use SSH, you need an SSH **server** on the machine you want to connect to, and an SSH **client** on the machine you want to connect from. In this lab, you'll install an SSH server on your Ubuntu virtual machine and connect to it from your Windows, macOS, or Linux host machine.
 
-**Secure Shell**, or **SSH**, is a special network protocol, that is widely used for secure remote login. Its most basic use is connecting to a remote (Linux) machine, and performing CLI commands on that machine. In simple terms: it lets you **connect** to a **Linux instance** and **perform commands** on that machine from your own machine.
+## Installing an SSH server
 
-This course will not focus on what (networking) protocols are. Other courses such as *Computer Networks 1* will build further on these concepts. For now, let's simply explore the functionality of SSH and how you can get started using it. The goal of this course for SSH is to get familiar with the concept, and to trying it a few times so you understand how to connect using it.
-
-<!-- TODO: add image for clarity? Or only in slides/during class? -->
-
-### Installing SSH
-
-#### Install SSH-server on Linux machine
-
-First of all, you will need to install the SSH-server software on your Linux system. For this course, we assume you use the Ubuntu operating system, and we will isntall it using the `apt` package manager.
-
-In order to install the software, use the following command:
+Use `apt` to install the **openssh-server** package:
 
 ```bash
-systemuser@localhost:~$ sudo apt install openssh-server
+sudo apt install openssh-server
 ```
 
-After confirmation and installation, your software should be ready to use. You can confirm this using the following command:
-
+This package registers an **ssh** system service. Start this service with the following command:
 
 ```bash
-systemuser@localhost:~$ sudo systemctl status ssh
+sudo systemctl start ssh
 ```
 
-::: info
-Using an SSH-server comes with a lot of possibilities - both for features and security. For this course, however, we do not take into consideration these more advanced use cases or the usage of a firewall. Do note that these are very important and should be kept in mind when using SSH!
-:::
-
-#### Install SSH-client on your own device
-
-In order to connect to a remote machine using SSH, you must have an SSH-client installed on your system. Most modern operating systems or Linux distributions, however, come with an SSH-client installed by default. For this course, we assume you are using Windows 11 - which should come pre-installed with this client. If this is not the case for your operating system, please ensure you install an SSH-client before continuing with this lab assignment!
-
-### Connecting to a remote machine
-
-Now all of the SSH-software is installed, we can start using SSH and connect to a remote machine. When connecting, we will be using the command line. In essence, the most simple SSH command is made up out of three parts:
-
-- The **SSH command** itself, **with any options** you might want to use
-- The **user** that you will log in as on the remote system
-- The **destination** or **hostname** of the system that you will be logging in on
-
-For this introduction, we will not be using any special options. The user will be the user we have been using on our Linux-system, and the destination will be the IP-address of that machine.
-
-::: info
-What IP-adresses are, and how we are able to connect to our virtual machine on VirtualBox, is not within the scope of this course. You will learn more about this in the courses such as *Computer Networks 1*. For this exercise, you can simply follow along with the steps for remote connection.
-:::
-
-<!-- TODO: refer to install guide for VM where the two network adapters (NAT and Host-only) should be configured?  -->
-
-Open up your PowerShell (Windows) or other terminal on your own device where you have the SSH-client software installed.
-
-We will use the following command structure to connect to our Linux machine:
-
-```powershell
-ssh user@host
-
-```
-
-In this case, we replace the `user` and `host` with the correct connection information. Our final commands becomes:
-
-```powershell
-ssh systemuser@192.168.56.20
-```
-
-::: info
-The IP-address in this command may slightly differ for your setup. To check this, use the `ip a` command and look for the IP-address that looks like `192.168.56.X`. Alternatively, you can use the following command: `ip a | grep 192.168.56`
-:::
-
-You will then be prompted to give in your password. This is the same password you use when logging in to your Linux machine. Do note that when typing, your password will not shown - this is a safety measure to make sure nobody can read you typing in your password. Be sure to type your password correctly, or copy it using your clipboard and paste it using `CTRL+ SHIFT+ V` in your terminal.
-
-Congratulations! You are now logged in on your Linux machine using SSH, and can use any bash-command you have learned so far. You are now working on the Linux machine using the bash shell - from your own device!
-
-## Practicing and exploring SSH
-
-In this section, we will share some tools and different ways to practice your SSH and Linux skills in interactive ways - in addition to the exercises we have offered throughout this course. 
-
-
-### FileZilla
-
-[FileZilla](https://filezilla-project.org) is a very useful graphical tool you can use for file transfers with a system where SSH is installed. In order to use it, you must first download the client software on your system.
-
-Once installed and opened, you will see a list of connection options on the top. For our course, you could connect to your VM using the following:
-
-- Host: `192.168.56.20`
-- Username: `systemuser`
-- Password: `your_user_password`
-- Port: `22`
-
-You can then use the Quickconnect button to connect to your system. You will now see every file on both the remote and your own system, and can use this graphical interface to quickly transfer files between the two. 
-
-<!-- TODO: add images for clarity? Or only during classs -->
-
-### SCP
-
-Another use case of SSH, is SCP or the **Secure Copy Protocol**. We can use this software to safely copy files or data to and from our remote system. It is similar in functionality to what you did with FileZilla, but we can use it in our terminal.
-
-The general command for SCP looks as follows:
-
+Also *enable* the service so that it starts automatically when you start the system:
 
 ```bash
-systemuser@localhost:~$ scp localfile.txt username@remotehost:/path/to/destination/for/file
+sudo systemctl enable ssh
 ```
 
-This means you will need to have SCP installed on your device - but this should come installed with the SSH client software. Let's say you have a file `example_file.txt` in the directory where your terminal on your own device tha tyou want to transfer to your home directory on the remote system. The command would look like:
+Finally, check the status of the service to confirm that it's active and enabled:
 
-<!-- TODO: add prompt for CMD/PowerShell? -->
-
-```powershell
-scp example_file.txt systemuser@192.168.56.20:/home/systemuser/example_file.txt
+```bash
+sudo systemctl status ssh
 ```
 
-Be careful when using SCP to double-check your paths and files! As with everything on the terminal; with great power, comes great responsability.
+Your SSH server is now active and listening on port **22**, which is the default for SSH.
 
+## Additional configuration for VirtualBox
 
-### OverTheWire - Bandit
+To connect to your SSH server, you need a network connection between your host and virtual machine. In VirtualBox, you need to configure a **host-only network**. In UTM, this step is not required, so you can skip these instructions and continue with the next section.
 
-OverTheWire is a platform that is made for interactively practicing your Linux fundamentals. It offers different "**wargames**" - in which you complete different objectives with scaling difficulty. 
+Press `Ctrl+H` to open the VirtualBox Network Tools:
 
-For this course and its topics, we recommend you check out [Bandit by OverTheWire](https://overthewire.org/wargames/bandit/). It is aimed for beginners, and uses SSH to jump from host to host. On every host, you have to find the credentials for the next host by using the Linux terminal. We recommend trying to make it to level 7 - but feel free to dig a bit deeper and learn about different commands
+![Network tools](images/remote-login/vb_network_tools.png)
 
-::: info
-This source and the commands used for these exercises is not part of the material you need to learn for the exam. However, the first levels offer a fun way of practicing your CLI-skills some more!
+Create a host-only network:
+
+![Creating a host-only network](images/remote-login/vb_hostonly_network.png)
+
+By default, the network will be set to **192.168.56.1/24**. Confirm that its DHCP server is enabled.
+
+Next, open the network settings for your virtual machine:
+
+![Configuring the host-only network](images/remote-login/vb_network_settings.png)
+
+Enable the second network adapter and attach it to the host-only network you created earlier. Do not change the first network adapter because you need it to connect to the internet. The second adapter only creates a connection between your virtual machine and your host; it cannot connect to the internet.
+
+Restart your virtual machine. You'll confirm the host-only network is working in the following sections.
+
+## Finding your IP address
+
+To connect to your SSH server, you need to know the **IP address** of your virtual machine.
+
+Open the Settings app, go to Network, and click the gear icon next to your network connection:
+
+![List of network connections](images/remote-login/network_connections.png)
+
+In VirtualBox, you'll have two connections. Click the gear icon next to the second connection, labeled **enp0s8** in the screenshot above. This should be your host-only network.
+
+In the connection details, find the field labeled **IPv4 Address**. In the screenshot below, my address is 192.168.64.8:
+
+![Viewing your IP address](images/remote-login/ip_address.png)
+
+In the next section, you'll use this address to connect to your virtual machine.
+
+::: warning
+All subsequent examples will use my IP address `192.168.64.8` and my username `steven`. Replace these with the IP address of your virtual machine and your username.
 :::
+
+## Using an SSH client
+
+Leave your virtual machine running and open a terminal on your *host* machine. On macOS or Linux, open the **Terminal** app. On Windows, open either **Terminal**, **PowerShell**, or **Command Prompt**. All of these should have the commands you need preinstalled.
+
+In this terminal, use the **`ping`** command to test the network connection between your host and virtual machine. Specify the IP address of your virtual machine as an argument:
+
+```bash
+ping 192.168.64.8
+```
+
+This command sends small packets back and forth and reports how long they took to arrive. If the command keeps pinging indefinitely, press `Ctrl+C` to stop it.
+
+::: warning
+If `ping` shows network errors or timeouts, verify that you're using the correct IP address. On VirtualBox, verify that your host-only network is configured correctly, and that you're pinging the host-only adapter, not the original one, as they have different addresses.
+:::
+
+Now that you have a working connection, use the **`ssh`** command to connect to your virtual machine:
+
+```bash
+ssh steven@192.168.64.8
+```
+
+Here, you specify both the IP address of the machine you want to connect to and your username on that machine. You can also specify the port with the `-p` option:
+
+```bash
+ssh -p 22 steven@192.168.64.8
+```
+
+However, this is not required when you're using the default port of 22.
+
+When you start an SSH session, the server will prompt you for the password for the username you provided. If that password is correct, the server prints a welcome message and opens a shell. Here's what that looks like for me, connecting from a macOS host:
+
+![Established SSH connection](images/remote-login/ssh_connection.png)
+
+Any commands you type here are executed on your virtual machine, even though you're using a terminal on your host machine. Try running the following command:
+
+```bash
+echo "Hello!" > ~/Desktop/hello.txt
+```
+
+This command creates a file on your desktop. Verify that this file was created, then return to your SSH session and try a few more commands. When you're done, use the `exit` command to close your session and return to your original shell.
+
+Using SSH to connect to a virtual machine that's running on your own device may not be very interesting. However, that same `ssh` command can connect to *any* machine that has an SSH server. All you need is an IP address and your username and password.
+
+In [Exercise 6.3](../exercises/exercises6#bandit), you'll use SSH to connect to a remote server over the internet.
+
+## Copying files over SSH
+
+SSH lets you copy files over the network through the **`scp`** (*Secure Copy Protocol*) command. To try this out, open a terminal on your host machine, but don't start an SSH session.
+
+Run the following command to copy the file you created earlier from the desktop on your virtual machine to the current directory on your host machine:
+
+```bash
+scp 'steven@192.168.64.8:~/Desktop/hello.txt' .
+```
+
+This command specifies a remote path to **hello.txt** by prefixing an IP address and a username. The quotes around this path prevent the tilde from getting parsed on your host machine, since it refers to your home directory on the virtual machine.
+
+`scp` is very useful for quickly copying files over the network. Behind the scenes, this command actually uses **SFTP** (*SSH File Transfer Protocol*) instead of the outdated Secure Copy Protocol it was originally named after. SFTP is more secure and more versatile than SCP. You'll try it out in [Exercise 6.2](../exercises/exercises6#sftp).
+
+## Up next
+
+This concludes the final lab for this course. Before you wrap up, work your way through the final exercises, where you'll practice using SSH and SFTP.
