@@ -818,7 +818,7 @@ rm temp_*
 </pre>
 </details>
 
-## Exercise 2.12
+## Exercise 2.12 {#cut-w}
 
 List the contents of the **shakespeare** directory but show only the files and their human-readable sizes. Sort the output by size, highest to lowest.
 

@@ -471,7 +471,7 @@ python3 text/hello.py
 
 This script should print a message to your terminal.
 
-## Searching for files
+## Searching for files {#find}
 
 To wrap up this lab, you’ll use the powerful **`find`** command to search for files and directories from the command line.
 

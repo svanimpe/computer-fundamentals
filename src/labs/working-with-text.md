@@ -263,7 +263,7 @@ Mila Novak;1D;10
 
 The first line is a header that labels the fields as “Student”, “Group”, and “Grade”. All other lines contain a value for each of these fields.
 
-### Sorting structured text
+### Sorting structured text {#sort-structured}
 
 To sort a structured file, you use the `-t` option to specify the **field delimiter**, and the `-k` option to specify a **sort key**. For example, here’s how to sort **grades.csv** by the second field, “Group”:
 
